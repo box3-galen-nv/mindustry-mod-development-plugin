@@ -11,6 +11,7 @@ import mindustrymoddevelopmentplugin.dsl.MindustryModRootExtension
 import mindustrymoddevelopmentplugin.dsl.MindustryRunConfig
 import mindustrymoddevelopmentplugin.meta.ModFileReader
 import mindustrymoddevelopmentplugin.meta.ModMeta
+import mindustrymoddevelopmentplugin.tasks.GradleProperties
 import mindustrymoddevelopmentplugin.tasks.JarTask
 import mindustrymoddevelopmentplugin.tasks.DeployTask
 import mindustrymoddevelopmentplugin.tasks.BuildModHJsonTask
@@ -280,10 +281,10 @@ class MindustryModPlugin @Inject constructor(
                     // The generated IDEA configuration passes -PmindustryDebug=true. A property given on
                     //     the command line wins over the DSL in both directions, so CI can force the
                     //     socket off for a project that enables it in `debug { }`.
-                    enabled = project.booleanPropertyOrNull(IdeaRunConfigs.DEBUG_PROPERTY)
+                    enabled = GradleProperties.booleanOrNull(project, IdeaRunConfigs.DEBUG_PROPERTY)
                         ?: debug.enableDebug.get(),
                     port = debug.debugPort.get(),
-                    suspend = project.booleanPropertyOrNull(IdeaRunConfigs.DEBUG_SUSPEND_PROPERTY)
+                    suspend = GradleProperties.booleanOrNull(project, IdeaRunConfigs.DEBUG_SUSPEND_PROPERTY)
                         ?: debug.debugSuspend.get(),
                 ),
                 headless = headless,
@@ -664,30 +665,6 @@ class MindustryModPlugin @Inject constructor(
         )
     }
 
-    /**
-     * Reads a boolean project property (`-Pname=value`, `gradle.properties`, `-D`).
-     *
-     * [Project.hasProperty] is not enough: it only reports that the property exists, so
-     * `-PmindustryDebug=false` still opened the debug socket, and `-PmindustryDebugSuspend=false`
-     * made the game wait for a debugger that never attaches — the game looks hung. A property given
-     * without a value counts as enabled, which is what a command-line flag means.
-     */
-    private fun Project.booleanProperty(name: String): Boolean {
-        val text = findProperty(name)?.toString()?.trim() ?: return false
-        return text.isEmpty() || text.toBoolean()
-    }
-
-    /**
-     * Like [booleanProperty], but null when the property was not given at all.
-     *
-     * Used where a command-line switch must be able to override a DSL default in both directions:
-     * `-PmindustryDebug=false` has to win over `debug { enableDebug = true }`, which a plain
-     * `dsl || property` cannot express.
-     */
-    private fun Project.booleanPropertyOrNull(name: String): Boolean? {
-        val text = findProperty(name)?.toString()?.trim() ?: return null
-        return text.isEmpty() || text.toBoolean()
-    }
 
     /**
      * Substitutes `{version}` into the download file name template and validates the result.
