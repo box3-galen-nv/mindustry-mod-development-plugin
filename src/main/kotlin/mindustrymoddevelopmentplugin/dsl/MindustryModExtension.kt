@@ -1,5 +1,7 @@
 package mindustrymoddevelopmentplugin.dsl
 
+import mindustrymoddevelopmentplugin.ArtifactNaming
+import mindustrymoddevelopmentplugin.TargetPlatform
 import mindustrymoddevelopmentplugin.meta.ModMeta
 import javax.inject.Inject
 import org.gradle.api.Action

@@ -1,7 +1,6 @@
 package mindustrymoddevelopmentplugin
 
 import java.io.File
-import mindustrymoddevelopmentplugin.dsl.HostPlatform
 import org.gradle.api.GradleException
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue

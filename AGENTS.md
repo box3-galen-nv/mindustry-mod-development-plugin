@@ -28,7 +28,12 @@ compilation and print `e:` daemon lines; ignore those and read the compiler diag
 MindustryModPlugin.kt   entry point: apply(), configureRoot(), configureModule(), helpers
 MindustryApi.kt         game API dependency (GitHub release assets, content-filtered Ivy repo)
 GameDataDir.kt          MINDUSTRY_DATA_DIR / per-OS Mindustry data directory resolution
-dsl/                    public DSL: MindustryModRootExtension + download/run/debug/build configs
+ArtifactNaming.kt       artifact names from build.format / modMeta, and the version tags
+HostPlatform.kt         where the build runs (Auto/Desktop/Android) and how to detect Termux
+TargetPlatform.kt       Jar/Android/All, the suffix a modVersion() is named for
+dsl/                    the public DSL and *only* the DSL: the two extensions
+                        (MindustryModRootExtension, MindustryModExtension) and the four nested
+                        configs (download, run, debug, build). Nothing else belongs here.
 meta/                   ModMeta (19 engine fields), ModFileReader (the engine's 4 metadata files)
 tasks/                  one internal object per task: <Name>Task.configure(...); non-task files are
                         plain nouns (AndroidSdk, RunLogging, IdeaRunConfigs)
@@ -44,6 +49,8 @@ tasks/                  one internal object per task: <Name>Task.configure(...);
 - An **unterminated KDoc** (typically a leftover opening marker above a freshly written block) makes the
   compiler report impossible errors, such as unresolved references to a regex match type. The real
   diagnostic is a `Syntax error / Unclosed comment` at the *end* of the log — read the whole log.
+- **`dsl/` holds the DSL only**: extensions and the configs they expose, nothing else. Helpers and enums
+  live in the root package, which is also what keeps a build script's imports predictable.
 - **One top-level declaration per file.** Detection or factory logic belongs in that type's `companion
   object` (`HostPlatform.detect`), never in a second top-level object, so no file declares two of them.
 - One object per task file, named after the file, with `configure(...)` doing the wiring; option holders

@@ -1,4 +1,4 @@
-package mindustrymoddevelopmentplugin.dsl
+package mindustrymoddevelopmentplugin
 
 /**
  * Where the build, and therefore the game it deploys to, is expected to run.

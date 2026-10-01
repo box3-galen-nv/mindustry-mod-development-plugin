@@ -1,7 +1,6 @@
 package mindustrymoddevelopmentplugin
 
 import java.io.File
-import mindustrymoddevelopmentplugin.dsl.HostPlatform
 import org.gradle.api.GradleException
 
 /**

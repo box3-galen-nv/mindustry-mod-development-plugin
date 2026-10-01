@@ -2,7 +2,7 @@ package mindustrymoddevelopmentplugin.tasks
 
 import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertTrue
-import mindustrymoddevelopmentplugin.dsl.ArtifactNaming
+import mindustrymoddevelopmentplugin.ArtifactNaming
 import mindustrymoddevelopmentplugin.dsl.MindustryRunConfig
 import org.junit.jupiter.api.Test
 

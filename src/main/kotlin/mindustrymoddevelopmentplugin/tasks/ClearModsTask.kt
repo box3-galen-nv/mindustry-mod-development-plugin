@@ -1,6 +1,6 @@
 package mindustrymoddevelopmentplugin.tasks
 
-import mindustrymoddevelopmentplugin.dsl.ArtifactNaming
+import mindustrymoddevelopmentplugin.ArtifactNaming
 import mindustrymoddevelopmentplugin.dsl.MindustryBuildConfig
 import mindustrymoddevelopmentplugin.dsl.MindustryModExtension
 import mindustrymoddevelopmentplugin.dsl.MindustryModRootExtension

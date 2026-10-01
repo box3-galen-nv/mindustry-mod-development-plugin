@@ -1,4 +1,4 @@
-package mindustrymoddevelopmentplugin.dsl
+package mindustrymoddevelopmentplugin
 
 /**
  * Packaging target platform.

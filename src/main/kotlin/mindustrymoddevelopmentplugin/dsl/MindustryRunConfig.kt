@@ -1,5 +1,6 @@
 package mindustrymoddevelopmentplugin.dsl
 
+import mindustrymoddevelopmentplugin.HostPlatform
 import mindustrymoddevelopmentplugin.GameDataDir
 import org.gradle.api.file.DirectoryProperty
 import org.gradle.api.provider.Property

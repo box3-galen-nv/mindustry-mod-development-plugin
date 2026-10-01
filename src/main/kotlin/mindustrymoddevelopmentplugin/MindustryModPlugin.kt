@@ -1,7 +1,5 @@
 package mindustrymoddevelopmentplugin
 
-import mindustrymoddevelopmentplugin.dsl.HostPlatform
-import mindustrymoddevelopmentplugin.dsl.ArtifactNaming
 import mindustrymoddevelopmentplugin.dsl.MindustryBuildConfig
 import mindustrymoddevelopmentplugin.dsl.MindustryDownloadConfig
 import mindustrymoddevelopmentplugin.dsl.MindustryModExtension

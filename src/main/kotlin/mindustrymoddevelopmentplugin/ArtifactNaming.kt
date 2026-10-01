@@ -1,5 +1,8 @@
-package mindustrymoddevelopmentplugin.dsl
+package mindustrymoddevelopmentplugin
 
+import mindustrymoddevelopmentplugin.dsl.MindustryModExtension
+import mindustrymoddevelopmentplugin.dsl.MindustryModRootExtension
+import mindustrymoddevelopmentplugin.dsl.MindustryBuildConfig
 import mindustrymoddevelopmentplugin.meta.ModFileReader
 import java.io.File
 import java.text.SimpleDateFormat
