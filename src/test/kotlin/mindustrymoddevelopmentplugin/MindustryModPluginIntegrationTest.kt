@@ -1667,4 +1667,80 @@ class MindustryModPluginIntegrationTest {
         )
         assertTrue(!result.output.contains("downloading the command-line tools"), "no download may happen")
     }
+    @Test
+    fun `a root project that is a mod does not package its subprojects sources`() {
+        // Multi-project mode puts the mods under src/<name>/, which is inside the root project's
+        // directory. The root used to compile those sources into its own jar.
+        write("settings.gradle.kts", """rootProject.name = "test"
+            include("sub")""")
+        write("build.gradle.kts", """
+            ${pluginSnippet()}
+            mindustryModRoot { mindustryApiVersion = "159" }
+            modMeta { name = "root-mod"; version = "1.0"; java = true }
+        """)
+        write("RootCls.java", "package rootonly;\npublic class RootCls {}\n")
+        write("sub/build.gradle.kts", """
+            ${pluginSnippet()}
+            modMeta { name = "sub-mod"; version = "1.0"; java = true }
+        """)
+        write("sub/SubCls.java", "package subonly;\npublic class SubCls {}\n")
+
+        val result = runner().withArguments(":jar").build()
+
+        assertTrue(result.task(":jar")?.outcome == TaskOutcome.SUCCESS, result.output)
+        val jar = rootDir.resolve("build/libs").listFiles()?.firstOrNull { it.name.endsWith(".jar") }
+        assertTrue(jar != null, "the root's jar must exist:\n${result.output}")
+        val entries = ZipFile(jar).use { zip -> zip.entries().asSequence().map { it.name }.toList() }
+        assertTrue(entries.any { it.startsWith("rootonly/") }, "the root's own source belongs in it: $entries")
+        assertTrue(!entries.any { it.startsWith("subonly/") }, "the subproject's source does not: $entries")
+    }
+
+    @Test
+    fun `root-only settings on a subproject are reported instead of being ignored`() {
+        write("settings.gradle.kts", """rootProject.name = "test"
+            include("sub")""")
+        write("build.gradle.kts", """
+            ${pluginSnippet()}
+            mindustryModRoot { mindustryApiVersion = "159" }
+        """)
+        write("sub/build.gradle.kts", """
+            ${pluginSnippet()}
+            mindustryModRoot {
+                mindustryApiVersion = "147"
+                build { jarSuffix = "-Desk" }
+            }
+            modMeta { name = "sub-mod"; version = "1.0"; java = true }
+        """)
+
+        val result = runner().withArguments("tasks").build()
+
+        assertTrue(
+            result.output.contains("Ignoring") && result.output.contains("mindustryApiVersion"),
+            "setting the API version on a subproject must be reported:\n${result.output}",
+        )
+        assertTrue(
+            result.output.contains("build.jarSuffix"),
+            "the ignored build setting must be named:\n${result.output}",
+        )
+    }
+    @Test
+    fun `a subproject's own deploy task is left alone instead of breaking clearMods`() {
+        write("settings.gradle.kts", """rootProject.name = "test"
+            include("sub")""")
+        write("build.gradle.kts", pluginSnippet())
+        write("sub/build.gradle.kts", """
+            ${pluginSnippet()}
+            // A deployment of its own, say to a server — not the mod packaging task.
+            tasks.register("deploy") { doLast { println("own deploy") } }
+            modMeta { name = "sub-mod"; version = "1.0"; java = true }
+        """)
+
+        val result = runner().withArguments("clearMods").build()
+
+        assertTrue(result.task(":clearMods")?.outcome == TaskOutcome.SUCCESS, result.output)
+        assertTrue(
+            result.output.contains("already has a 'deploy' task"),
+            "the conflict must be reported, not guessed at:\n${result.output}",
+        )
+    }
 }

@@ -24,8 +24,21 @@ internal object DeployTask {
         androidName: String,
         deployName: String,
         project: Project,
+        androidSdkAvailable: Boolean,
     ) {
-        task.dependsOn("jar", "jarAndroid")
+        // A desktop-only build must not be blocked by a missing Android SDK: `jarAndroid` is only wired in
+        // when there is an SDK to use (or auto-download is on), and otherwise the merge says so and ships
+        // the desktop jar alone.
+        task.dependsOn("jar")
+        if (androidSdkAvailable) task.dependsOn("jarAndroid")
+        if (!androidSdkAvailable) {
+            task.doFirst {
+                task.logger.warn(
+                    "No usable Android SDK found, so '$deployName.jar' contains the desktop classes only. " +
+                    "Set build.androidSdkDir, install one, or enable download.androidSdkAutoDownload."
+                )
+            }
+        }
         task.duplicatesStrategy = DuplicatesStrategy.EXCLUDE
 
         // Merge desktop + Android jars. Sources are declared lazily so the actual
@@ -35,7 +48,9 @@ internal object DeployTask {
         val jarFile = File(libsDir, "$jarName.jar")
         val androidFile = File(libsDir, "$androidName.jar")
         task.from(project.provider {
-            listOf(project.zipTree(jarFile), project.zipTree(androidFile))
+            // Resolved at execution time: the Android jar may be absent on purpose (see above).
+            listOfNotNull(jarFile.takeIf { it.exists() }?.let { project.zipTree(it) },
+                androidFile.takeIf { it.exists() }?.let { project.zipTree(it) })
         })
         task.archiveFileName.set("$deployName.jar")
 

@@ -14,7 +14,7 @@
 ```kotlin
 // build.gradle.kts (root)
 plugins {
-    id("io.github.box3-galen-nv.mindustry-mod-development-plugin") version "<version>" apply false
+    id("io.github.box3-galen-nv.mindustry-mod-development-plugin") version "1.0.0" apply false
 }
 
 repositories {
@@ -61,7 +61,7 @@ mindustryModRoot {
 // Java-only 模组请去掉 kotlin("jvm") 那一行
 plugins {
     kotlin("jvm") version "2.4.20"
-    id("io.github.box3-galen-nv.mindustry-mod-development-plugin")
+    id("io.github.box3-galen-nv.mindustry-mod-development-plugin") version "1.0.0"
 }
 
 mindustryModRoot {
@@ -109,11 +109,11 @@ project/
 
 | 属性 | 类型 | 默认值 | 说明 |
 |----------|------|---------|----|
-| `mindustryApiVersion` | `String` | *(required)* | 编译所用的 Mindustry 版本：`"159"`、`"v159"`、`"latest"`、`"be"`（≥ v97） |
+| `mindustryApiVersion` | `String` | *(未设置)* | 编译所用的 Mindustry 版本 —— 可选，不设就不加任何 API 依赖：`"159"`、`"v159"`、`"latest"`、`"be"`（≥ v97） |
 | `build.useHJson` | `Boolean` | `false` | 生成元数据的格式（默认 `mod.json`） |
 | `download.mindustryDownloadVersion` | `String` | `"146"` | 要下载的游戏版本；可用 `"latest"`，`"be"` 只是编译期 API 通道、没有发布资产 |
 | `download.mindustryDownloadUrl` | `String` | GitHub Releases | 下载基础 URL |
-| `download.mindustryGamePath` | `RegularFile` | `<root>/build/game/` | 游戏 jar 路径 |
+| `download.mindustryGamePath` | `RegularFile` | `<root>/build/game/Mindustry-<version>.jar` | 游戏 jar 路径；以 `.jar` 结尾按文件用，否则按目录用 |
 | `download.mindustryDownloadFileName` | `String` | `"Mindustry-{version}"` | 下载文件名模板 |
 | `download.androidSdkAutoDownload` | `Boolean` | `false` | 可选开启（供 `jarAndroid` 使用）：SDK 不可用时下载并安装 |
 | `download.androidSdkDownloadUrl` | `String` | official Google URL | 命令行工具下载地址（渠道/镜像） |
@@ -228,7 +228,7 @@ project/
 
 `generateModMeta = true` 时，仍为默认值的字段会从项目根目录已有的元数据文件回填，因此逐步迁移到 DSL 不会丢掉只写在文件里的元数据。DSL 中显式配置的值始终优先。由于"未配置"是按"等于默认值"判定的，把字段**显式设成默认值**无法覆盖文件里的值。
 
-引擎接受 4 个元数据文件名 —— `mod.json`、`mod.hjson`、`plugin.json`、`plugin.hjson`（`Mods.java:34`），检查顺序与游戏一致，第一个存在的文件既作为回填来源，也会被打进 jar。
+引擎接受 4 个元数据文件名 —— `mod.json`、`mod.hjson`、`plugin.json`、`plugin.hjson`（`Mods.java:34`），检查顺序与游戏一致，第一个存在的文件作为回填来源；四个文件名中凡存在的都会被打进 jar。
 
 ---
 
@@ -240,7 +240,7 @@ project/
 | `runMindustry` | root | 部署并启动游戏 |
 | `buildModHJson` | mod | 生成模组元数据 |
 | `jar` | mod | 打包桌面 Jar |
-| `jarAndroid` | mod | 打包 Android DEX（需要 `ANDROID_HOME`） |
+| `jarAndroid` | mod | 打包 Android DEX（需要 Android SDK：`build.androidSdkDir`、`ANDROID_HOME`/`ANDROID_SDK_ROOT`，或自动下载） |
 | `deploy` | mod | 合并桌面和 Android 包 |
 | `generateIdeaRunConfigs` | root | 生成 `.run/` 的 IDEA 运行配置（无依赖） |
 
@@ -274,5 +274,5 @@ tasks.named("runMindustry") { dependsOn(":sub:deploy") }   // 每个模组项目
 # 注意事项
 
 - 不要在 `settings.gradle.kts` 中用 `pluginManagement` 指定 Kotlin 插件版本，会和 TestKit 冲突
-- `jarAndroid` 需要设置 `ANDROID_HOME` 或 `ANDROID_SDK_ROOT` 环境变量
+- `jarAndroid` 需要 Android SDK：可用 `build.androidSdkDir`、`ANDROID_HOME`/`ANDROID_SDK_ROOT` 环境变量，或 `download.androidSdkAutoDownload`
 - CI 在 JDK 17/21/25 上跑测试并校验插件元数据（`.github/workflows/ci.yml`）；无钩子、无代码生成

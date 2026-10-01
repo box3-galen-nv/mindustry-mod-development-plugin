@@ -64,7 +64,10 @@ internal object AndroidSdkInstaller {
     private fun hasAnyBuildTools(sdkRoot: File): Boolean =
         File(sdkRoot, "build-tools").listFiles().orEmpty().any { isD8(it) }
 
-    private fun isD8(dir: File): Boolean = File(dir, "d8").isFile || File(dir, "d8.jar").isFile
+    // Windows build-tools ship `d8.bat` with the jar under lib/, macOS and Linux ship the `d8` launcher:
+    // only checking for `d8`/`d8.jar` made a perfectly usable Windows SDK look incomplete.
+    private fun isD8(dir: File): Boolean =
+        File(dir, "d8").isFile || File(dir, "d8.bat").isFile || File(dir, "d8.jar").isFile
 
     /** Whether [isPackagePresent] can decide the spec locally, i.e. it is a `platforms`/`build-tools` one. */
     private fun isCheckableSpec(spec: String): Boolean {

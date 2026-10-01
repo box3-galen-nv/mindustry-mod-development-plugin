@@ -11,6 +11,7 @@ import mindustrymoddevelopmentplugin.meta.ModMeta
 import mindustrymoddevelopmentplugin.tasks.JarTask
 import mindustrymoddevelopmentplugin.tasks.DeployTask
 import mindustrymoddevelopmentplugin.tasks.BuildModHJsonTask
+import mindustrymoddevelopmentplugin.tasks.AndroidSdk
 import mindustrymoddevelopmentplugin.tasks.ClearModsTask
 import mindustrymoddevelopmentplugin.tasks.DownloadMindustryTask
 import mindustrymoddevelopmentplugin.tasks.GenerateIdeaRunConfigsTask
@@ -143,7 +144,10 @@ class MindustryModPlugin @Inject constructor(
         // root that is not a mod simply has no `deploy` task and is filtered out here.
         val modProjects = project.providers.provider {
             (listOf(project.rootProject) + project.rootProject.subprojects)
-                .filter { it.tasks.findByName("deploy") != null }
+                // `is Jar` and not just "a task called deploy": a subproject may deploy to a server or a
+                // container with its own `deploy`, and that one used to be picked up here — clearMods then
+                // crashed on it and runMindustry complained that it is not a Jar task.
+                .filter { it.tasks.findByName("deploy") is Jar }
         }
 
         // The directory the game would use by itself: MINDUSTRY_DATA_DIR, else the per-OS default.
@@ -210,14 +214,21 @@ class MindustryModPlugin @Inject constructor(
     private fun configureModule(project: Project, ext: MindustryModExtension, hasModFile: Boolean) {
         // Computed once and shared: the Kotlin-presence scan and the source sets must agree, and
         //     building the list twice would walk the same paths twice.
+        // Every project whose directory sits inside this one: a root project that is also a mod must not
+        // package its subprojects' sources (and a nested subproject must not package its own children).
+        val nestedProjectDirs = project.rootProject.allprojects
+            .filter { it != project && it.projectDir.toPath().startsWith(project.projectDir.toPath()) }
+            .map { it.projectDir }
         val excludedSources = modSourceExcludes(
             project.projectDir,
             project.gradle.gradleUserHomeDir,
             ownProjectDataDir(project),
+            nestedProjectDirs,
         )
         val kotlin = requireKotlinPluginIfNeeded(project, excludedSources)
         val rootExt = project.rootProject.extensions.findByType(MindustryModRootExtension::class.java)
 
+        warnAboutRootOnlySettings(project)
         MindustryApi.configure(project, rootExt?.mindustryApiVersion?.orNull)
         configureSourceDirs(project, kotlin, excludedSources)
 
@@ -250,8 +261,23 @@ class MindustryModPlugin @Inject constructor(
             JarAndroidTask.configure(task, libsDir, names.jar, names.android, project, jarAndroidOptions(project, rootExt))
         }
 
+        // A project may already deploy somewhere (a server, a container). Registering our own task under the
+        // same name would fail the whole build, so the user's task wins and we say what is not happening.
+        if (project.tasks.findByName("deploy") != null) {
+            project.logger.warn(
+                "Project '${project.path}' already has a 'deploy' task, so the plugin did not add its own " +
+                "merge task. runMindustry will not deploy this project's mod until that task is renamed."
+            )
+            return@configureModule
+        }
         project.tasks.register("deploy", Jar::class.java) { task ->
-            DeployTask.configure(task, libsDir, names.jar, names.android, names.deploy, project)
+            DeployTask.configure(
+                task, libsDir, names.jar, names.android, names.deploy, project,
+                // Auto-download means jarAndroid will provide an SDK itself; otherwise one has to be found.
+                androidSdkAvailable = jarAndroidOptions(project, rootExt).let { options ->
+                    options.autoDownloadSdk || AndroidSdk.findAndroidSdkDir(options.androidSdkDir?.orNull?.asFile) != null
+                },
+            )
         }
     }
 
@@ -373,6 +399,7 @@ class MindustryModPlugin @Inject constructor(
         projectDir: File,
         gradleUserHome: File,
         dataDir: File? = null,
+        nestedProjectDirs: List<File> = emptyList(),
     ): List<String> {
         // Always excluded: the default location, so a leftover data directory from an earlier build
         // is not compiled as mod source either.
@@ -382,6 +409,15 @@ class MindustryModPlugin @Inject constructor(
         if (home.startsWith(root) && home != root) {
             excludes.add(root.relativize(home).toString().replace(File.separatorChar, '/') + "/**")
         }
+        // Directories of *other* projects that live inside this one. A root project that is itself a mod
+        // would otherwise compile the subprojects' sources into its own jar — duplicate classes at best,
+        // someone else's code shipped at worst. Subprojects normally live under `src/<name>/`.
+        for (nested in nestedProjectDirs) {
+            val nestedPath = nested.toPath()
+            if (nestedPath.startsWith(root) && nestedPath != root) {
+                excludes.add(root.relativize(nestedPath).toString().replace(File.separatorChar, '/') + "/**")
+            }
+        }
         // A custom data directory inside this project is a source-root candidate too.
         if (dataDir != null) {
             val dataPath = dataDir.toPath()
@@ -390,6 +426,40 @@ class MindustryModPlugin @Inject constructor(
             }
         }
         return excludes
+    }
+
+    /**
+     * Warns when a *subproject* sets a setting that only the root project's block can decide.
+     *
+     * `mindustryApiVersion` and the whole `build { }` block are read from the root project — they name the
+     * artifacts and pick the API dependency for every mod in the build — while `run { }` is per project.
+     * Setting them on a subproject used to do nothing at all, silently.
+     */
+    private fun warnAboutRootOnlySettings(project: Project) {
+        if (project == project.rootProject) return
+        val ext = project.extensions.findByType(MindustryModRootExtension::class.java) ?: return
+        val build = ext.build
+
+        val ignored = buildList {
+            if (ext.mindustryApiVersion.isPresent) add("mindustryApiVersion")
+            if (build.useHJson.get() != MindustryBuildConfig.DEFAULT_USE_HJSON) add("build.useHJson")
+            if (build.format.get() != MindustryBuildConfig.DEFAULT_FORMAT) add("build.format")
+            if (build.jarSuffix.get() != MindustryBuildConfig.DEFAULT_JAR_SUFFIX) add("build.jarSuffix")
+            if (build.androidSuffix.get() != MindustryBuildConfig.DEFAULT_ANDROID_SUFFIX) {
+                add("build.androidSuffix")
+            }
+            if (build.deploySuffix.get() != MindustryBuildConfig.DEFAULT_DEPLOY_SUFFIX) add("build.deploySuffix")
+            if (build.timeFormat.get() != MindustryBuildConfig.DEFAULT_TIME_FORMAT) add("build.timeFormat")
+            if (build.d8Args.get() != MindustryBuildConfig.DEFAULT_D8_ARGS) add("build.d8Args")
+            if (build.androidSdkDir.isPresent) add("build.androidSdkDir")
+        }
+        if (ignored.isEmpty()) return
+
+        project.logger.warn(
+            "Ignoring ${ignored.joinToString(", ")} on subproject '${project.path}': these are decided by " +
+            "the root project's mindustryModRoot { } block, because they name the artifacts and the API " +
+            "for the whole build. Move them there, or delete them here to silence this warning."
+        )
     }
 
     /**

@@ -7,6 +7,7 @@ import mindustrymoddevelopmentplugin.dsl.MindustryModRootExtension
 import mindustrymoddevelopmentplugin.meta.ModFileReader
 import java.io.File
 import org.gradle.api.Project
+import org.gradle.api.GradleException
 import org.gradle.api.Task
 
 /**
@@ -54,11 +55,17 @@ internal object ClearModsTask {
                 // Substring matching made mod "my" delete another mod's marked jar as well; the pattern is
                 // derived from build.format so only this mod's own artifacts match.
                 val ext = sub.extensions.findByType(MindustryModExtension::class.java)
+                    ?: throw GradleException(
+                        "Project '${sub.path}' has a 'deploy' task of type Jar but the " +
+                        "mindustry-mod-development plugin is not applied to it, so clearMods cannot tell " +
+                        "which of its files are mod deployments. Either apply the plugin there or rename " +
+                        "that task."
+                    )
                 val rootExt = sub.rootProject.extensions.findByType(MindustryModRootExtension::class.java)
                 val format = rootExt?.build?.format?.get() ?: MindustryBuildConfig.DEFAULT_FORMAT
                 val pattern = deployedJarPattern(
                     deployTag = deployTag,
-                    values = ArtifactNaming.values(sub, ext!!),
+                    values = ArtifactNaming.values(sub, ext),
                     format = format,
                     suffixes = listOf(
                         rootExt?.build?.jarSuffix?.get() ?: MindustryBuildConfig.DEFAULT_JAR_SUFFIX,

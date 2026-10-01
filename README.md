@@ -11,10 +11,15 @@ Handles mod metadata generation, jar packaging, Android DEX compilation, and gam
 
 ### Apply the plugin
 
+The plugin is published on the [Gradle Plugin Portal](https://plugins.gradle.org/), which Gradle already
+searches, so no repository has to be declared for it. The configuration cache is **not supported yet**:
+run with `--no-configuration-cache` (or keep `org.gradle.configuration-cache` unset) until the log-stream
+listener is reworked.
+
 ```kotlin
 // build.gradle.kts (root)
 plugins {
-    id("io.github.box3-galen-nv.mindustry-mod-development-plugin") version "<version>" apply false
+    id("io.github.box3-galen-nv.mindustry-mod-development-plugin") version "1.0.0" apply false
 }
 
 repositories {
@@ -64,7 +69,7 @@ Root project is itself a mod — no `src/<name>/` submodule needed.
 // build.gradle.kts — drop the kotlin("jvm") line for a Java-only mod
 plugins {
     kotlin("jvm") version "2.4.20"
-    id("io.github.box3-galen-nv.mindustry-mod-development-plugin")
+    id("io.github.box3-galen-nv.mindustry-mod-development-plugin") version "1.0.0"
 }
 
 mindustryModRoot {
@@ -114,11 +119,11 @@ project/
 
 | Property | Type | Default | Description |
 |----------|------|---------|----|
-| `mindustryApiVersion` | `String` | *(required)* | Mindustry version to compile against: `"159"`, `"v159"`, `"latest"`, `"be"` (≥ v97) |
+| `mindustryApiVersion` | `String` | *(unset)* | Mindustry version to compile against — optional, without it no API dependency is added: `"159"`, `"v159"`, `"latest"`, `"be"` (≥ v97) |
 | `build.useHJson` | `Boolean` | `false` | `true` → `mod.hjson`, `false` → `mod.json` (the default) |
 | `download.mindustryDownloadVersion` | `String` | `"146"` | Game release to download; `"latest"` is allowed, `"be"` is API-only and has no release asset |
 | `download.mindustryDownloadUrl` | `String` | GitHub Releases | Download base URL |
-| `download.mindustryGamePath` | `RegularFile` | `<root>/build/game/` | Game jar path (file or directory) |
+| `download.mindustryGamePath` | `RegularFile` | `<root>/build/game/Mindustry-<version>.jar` | Game jar path; a path ending in `.jar` is used as a file, anything else as a directory |
 | `download.mindustryDownloadFileName` | `String` | `"Mindustry-{version}"` | Download file name template |
 | `download.androidSdkAutoDownload` | `Boolean` | `false` | Opt-in (consumed by `jarAndroid`): download and install the SDK when none is usable |
 | `download.androidSdkDownloadUrl` | `String` | official Google URL | Command-line tools download (mirror/channel) |
@@ -248,7 +253,7 @@ Full list in [`ModMeta.kt`](src/main/kotlin/com/example/mindustry/meta/ModMeta.k
 
 When `generateModMeta = true`, every field still at its default value is read back from an existing metadata file in the project root, so adopting the DSL does not drop metadata that only lives in the file. Explicit DSL values always win. Because "unset" is detected as "equal to the default", explicitly setting a field *to* its default cannot override the file value.
 
-The engine accepts four metadata file names — `mod.json`, `mod.hjson`, `plugin.json`, `plugin.hjson` (`Mods.java:34`). They are checked in exactly that order, the same one the game uses, and the first one that exists is the back-fill source and the file packed into the jar.
+The engine accepts four metadata file names — `mod.json`, `mod.hjson`, `plugin.json`, `plugin.hjson` (`Mods.java:34`). They are checked in exactly that order, the same one the game uses, and the first one that exists is the back-fill source. Every one of the four names that exists is packed into the jar.
 
 ---
 
@@ -260,7 +265,7 @@ The engine accepts four metadata file names — `mod.json`, `mod.hjson`, `plugin
 | `runMindustry` | root | Deploy mods + launch game |
 | `buildModHJson` | mod | Generate `mod.hjson`/`mod.json` |
 | `jar` | mod | Build desktop jar |
-| `jarAndroid` | mod | Build Android DEX (requires `ANDROID_HOME`) |
+| `jarAndroid` | mod | Build Android DEX (needs an Android SDK: `build.androidSdkDir`, `ANDROID_HOME`/`ANDROID_SDK_ROOT`, or auto-download) |
 | `deploy` | mod | Merge desktop + Android jars |
 | `generateIdeaRunConfigs` | root | Write `.run/` IDEA run configurations (no dependencies) |
 
@@ -294,5 +299,5 @@ The generated `.run/` configuration already does the equivalent: it lists the pa
 ## Notes
 
 - `settings.gradle.kts` must not use `pluginManagement` for Kotlin plugin — collides with Gradle TestKit
-- `jarAndroid` requires `ANDROID_HOME` or `ANDROID_SDK_ROOT` env var
+- `jarAndroid` needs an Android SDK: `build.androidSdkDir`, the `ANDROID_HOME`/`ANDROID_SDK_ROOT` variables, or `download.androidSdkAutoDownload`
 - CI runs the test suite on JDK 17, 21 and 25 plus `validatePlugins` (`.github/workflows/ci.yml`); no pre-commit hooks, no codegen

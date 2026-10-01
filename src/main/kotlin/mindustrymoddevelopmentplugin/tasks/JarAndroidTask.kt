@@ -87,13 +87,22 @@ internal object JarAndroidTask {
 
             val buildToolsRoot = File(sdkRoot, "build-tools")
                 .listFiles()
-                ?.filter { File(it, "d8").exists() || File(it, "d8.jar").exists() }
+                ?.filter {
+                    File(it, "d8").exists() || File(it, "d8.bat").exists() || File(it, "d8.jar").exists()
+                }
                 ?.maxWithOrNull(Comparator(AndroidSdk::compareSdkVersions))
                 ?: throw GradleException("No build-tools found in '$sdkRoot/build-tools'")
 
+            // `d8.bat` is what Windows build-tools install (the jar lives under lib/); running that jar
+            // directly, as the old fallback did, only produced a bare IOException.
             val d8Binary = when {
                 File(buildToolsRoot, "d8").exists() -> File(buildToolsRoot, "d8").absolutePath
-                else -> File(buildToolsRoot, "lib/d8.jar").absolutePath
+                File(buildToolsRoot, "d8.bat").exists() -> File(buildToolsRoot, "d8.bat").absolutePath
+                else -> throw GradleException(
+                    "No d8 launcher in '$buildToolsRoot': expected 'd8' (macOS/Linux) or 'd8.bat' " +
+                    "(Windows). Reinstall that build-tools package, or point " +
+                    "download.androidSdkDownloadPackages at a complete one."
+                )
             }
 
             val deps = buildSet {

@@ -328,6 +328,19 @@ class AndroidSdkInstallerTest {
     }
 
     // =========================================================================
+    @Test
+    fun `a windows sdk with only d8_bat counts as complete`() {
+        // Windows build-tools install `d8.bat` (the jar sits under lib/), so a file check for `d8` alone
+        // declared a perfectly usable SDK incomplete and made the installer download it again.
+        val sdk = File(root, "win-sdk")
+        File(sdk, "platforms/android-30").mkdirs()
+        File(sdk, "platforms/android-30/android.jar").writeText("x")
+        File(sdk, "build-tools/34.0.0").mkdirs()
+        File(sdk, "build-tools/34.0.0/d8.bat").writeText("rem d8")
+
+        assertTrue(!AndroidSdkInstaller.needsInstall(sdk), "a d8.bat build-tools is usable")
+    }
+
     //  install
     // =========================================================================
 
