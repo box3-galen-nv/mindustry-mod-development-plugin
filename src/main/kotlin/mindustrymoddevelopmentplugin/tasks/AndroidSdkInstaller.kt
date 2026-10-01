@@ -342,15 +342,22 @@ internal object AndroidSdkInstaller {
 
         val process = builder.start()
 
-        if (answerLicences) {
-            // Answer every prompt with "y" instead of shelling out to `yes`, which does not
-            // exist on Windows.
-            process.outputStream.bufferedWriter().use { writer ->
-                repeat(LICENCE_ANSWERS) { writer.write("y\n") }
+        // sdkmanager can exit before it reads a single answer (a broken manifest, an unusable SDK root),
+        // and writing to its stdin then raises "Broken pipe". Letting that exception escape replaced the
+        // output that says what actually went wrong — the reported failure was "Broken pipe" instead of
+        // the hint naming the setting to change. It is timing-dependent, which is why it surfaced on one
+        // CI job and not another.
+        runCatching {
+            if (answerLicences) {
+                // Answer every prompt with "y" instead of shelling out to `yes`, which does not
+                // exist on Windows.
+                process.outputStream.bufferedWriter().use { writer ->
+                    repeat(LICENCE_ANSWERS) { writer.write("y\n") }
+                }
+            } else {
+                process.outputStream.close()
             }
-        } else {
-            process.outputStream.close()
-        }
+        }.onFailure { log("sdkmanager stopped reading its input: ${it.message}") }
 
         // Drain stdout concurrently: sdkmanager prints progress and would deadlock on a
         // full pipe if we waited for exit first.

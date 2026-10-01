@@ -405,6 +405,36 @@ class AndroidSdkInstallerTest {
     }
 
     @Test
+    fun `a broken pipe does not replace the sdkmanager output`() {
+        // `exec 0<&-` closes the script's stdin, so the plugin's licence answers definitely hit a closed
+        // pipe. That IOException used to escape and become the reported failure, hiding the output that
+        // says what to fix — it was timing-dependent, so CI saw it on one job and not another.
+        val url = toolsArchive(
+            """
+            #!/bin/sh
+            exec 0<&-
+            echo "Warning: Failed to download any source lists!"
+            exit 1
+            """.trimIndent() + "\n"
+        )
+
+        val error = runCatching {
+            AndroidSdkInstaller.install(File(root, "sdk-broken-pipe"), url, listOf("platforms;android-30"), 5, log)
+        }.exceptionOrNull()
+
+        assertTrue(error != null, "install should fail")
+        assertTrue(
+            !error!!.message!!.contains("Broken pipe"),
+            "the child's output must win over the pipe error: ${error.message}"
+        )
+        assertTrue(
+            error.message!!.contains("download any source lists", ignoreCase = true) ||
+                error.message!!.contains("androidSdkDownloadUrl"),
+            "the hint should come from sdkmanager output: ${error.message}"
+        )
+    }
+
+    @Test
     fun `install reports an unusable download url`() {
         val error = runCatching {
             AndroidSdkInstaller.install(File(root, "sdk-bad-url"), "not a url", emptyList(), 5, log)
