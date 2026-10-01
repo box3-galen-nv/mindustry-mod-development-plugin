@@ -2,7 +2,6 @@ package mindustrymoddevelopmentplugin
 
 import java.io.File
 import mindustrymoddevelopmentplugin.dsl.HostPlatform
-import mindustrymoddevelopmentplugin.dsl.HostPlatformDetector
 import org.gradle.api.GradleException
 
 /**
@@ -41,7 +40,7 @@ internal object GameDataDir {
         osName: String = System.getProperty("os.name"),
         userHome: String = System.getProperty("user.home"),
         appData: String? = System.getenv("APPDATA"),
-        hostPlatform: HostPlatform = HostPlatformDetector.detect(),
+        hostPlatform: HostPlatform = HostPlatform.detect(),
         androidAppId: String = ANDROID_APP_ID,
     ): File {
         if (!env.isNullOrBlank()) return File(env)

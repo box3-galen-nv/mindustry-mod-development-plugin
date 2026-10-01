@@ -98,7 +98,7 @@ tasks/                  one internal object per task: <Name>Task.configure(...);
   run as `java -cp <jar> com.android.tools.r8.D8`, because build-tools' `d8` is a shell script and Android
   has no `/bin/sh`. `android.jar` is optional: d8 runs without it with a warning. Never let a resolved d8
   trigger an install.
-- **Android is recognised, not assumed**: `HostPlatformDetector` treats Linux plus (`TERMUX_VERSION` or a
+- **Android is recognised, not assumed**: `HostPlatform.detect` treats Linux plus (`TERMUX_VERSION` or a
   `PREFIX` inside `com.termux`) as Android. Architecture is deliberately not part of it. `GameDataDir` has an
   Android branch — `/storage/emulated/0/Android/data/<appId>/files`, what `AndroidLauncher` sets — because
   `os.name` says "Linux" there and the desktop path is wrong. On the APK both `MINDUSTRY_DATA_DIR` and
