@@ -92,6 +92,21 @@ tasks/                  one internal object per task: <Name>Task.configure(...);
 - **Two deliberate tradeoffs, both documented in the README**: `jarAndroid` fingerprints the SDK by path
   only (hashing a whole SDK costs more than re-running d8), and `build/buildCounter.txt` is read while the
   artifact name is resolved, so it is not a declared task input — the name changes anyway.
+- **d8 is looked up without an Android SDK, in this order**: `build.d8Executable`, then `d8` on the `PATH`
+  (but only when the project did *not* configure `build.androidSdkDir` — an explicit SDK directory is an
+  instruction and gets installed if empty), then any installed SDK, then an install. A lone `lib/d8.jar` is
+  run as `java -cp <jar> com.android.tools.r8.D8`, because build-tools' `d8` is a shell script and Android
+  has no `/bin/sh`. `android.jar` is optional: d8 runs without it with a warning. Never let a resolved d8
+  trigger an install.
+- **Android is recognised, not assumed**: `HostPlatformDetector` treats Linux plus (`TERMUX_VERSION` or a
+  `PREFIX` inside `com.termux`) as Android. Architecture is deliberately not part of it. `GameDataDir` has an
+  Android branch — `/storage/emulated/0/Android/data/<appId>/files`, what `AndroidLauncher` sets — because
+  `os.name` says "Linux" there and the desktop path is wrong. On the APK both `MINDUSTRY_DATA_DIR` and
+  `-Dmindustry.data.dir` are dead, so the warning must say that instead of suggesting them. Android gets no
+  `.run/*.xml` and exactly one lifecycle hint, never an edit to the user's build settings.
+- **`runMindustry` on Android is not implemented**: it refuses to launch the desktop jar (Arc ships no
+  aarch64 Linux SDL backend) and the headless-server route is designed but absent. Do not document it as
+  working.
 - **d8**: drain its merged output *while* it runs (a full pipe buffer deadlocks `waitFor`), include the
   captured output in failure messages, and delete a half-written output jar.
 - **SDK installs never modify an SDK they did not create**, and the post-install check only reports
@@ -120,6 +135,12 @@ tasks/                  one internal object per task: <Name>Task.configure(...);
 
 ## Verified facts — do not re-investigate
 
+- Termux ships the **unmodified** Gradle 9.8.0 zip: `packages/gradle/build.sh` has the same
+  `TERMUX_PKG_SHA256` as our wrapper pin and no patches, so 9.8 on aarch64 Android is distribution-verified.
+  Termux's main repo also has `d8 37.0.0`, `kotlin 2.4.20`, `openjdk-17/21` — and no `jdtls`.
+- `server-release.jar` (v147+) is self-contained with `linux/aarch64` natives, so the headless path has no
+  native gap on Termux; `dependencies.jar` only exists from v159.7; the desktop `Mindustry.jar` has no
+  Linux aarch64 SDL backend at all, which is why the GUI cannot run there.
 - Game API: one content-filtered Ivy repository over the GitHub release assets. `be` →
   `MindustryBuilds` `master/latest.jar`; `latest` / `>= 155.4` → `dependencies.jar`;
   `97 … 155.3` → `Mindustry.jar` (also bundles Arc). **v97 is the floor** (first release with a mod

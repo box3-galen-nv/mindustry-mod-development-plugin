@@ -278,3 +278,45 @@ tasks.named("runMindustry") { dependsOn(":sub:deploy") }   // 每个模组项目
 - 不要在 `settings.gradle.kts` 中用 `pluginManagement` 指定 Kotlin 插件版本，会和 TestKit 冲突
 - `jarAndroid` 需要 Android SDK：可用 `build.androidSdkDir`、`ANDROID_HOME`/`ANDROID_SDK_ROOT` 环境变量，或 `download.androidSdkAutoDownload`
 - CI 在 JDK 17/21/25 上跑测试并校验插件元数据（`.github/workflows/ci.yml`）；无钩子、无代码生成
+
+## Android / Termux
+
+在手机上构建模组是可行的，而且**裸 Termux（不用容器）就不需要 Android SDK**：
+
+```sh
+pkg install openjdk-17 git unzip d8     # d8 负责 dex；要跑 jdtls 再加 openjdk-21
+GRADLE_USER_HOME="$PWD/.gradle-home" ./gradlew jar jarAndroid deploy
+```
+
+- **没有 SDK 也能找到 d8。** 优先级是 `build.d8Executable`，然后是 `PATH` 上的 `d8`（即 `pkg install d8`
+  装的那个）。命中任意一个，`jarAndroid` 就完全跳过 SDK 解析，不会下载任何东西。没配置 SDK 时才会用已装的
+  SDK，最后才考虑安装。
+- `android.jar` 现在是**可选**的：没有它 d8 照常运行并给出警告（只是脱糖不够精确）。Termux 上通常根本没有 SDK。
+- 如果 build-tools 目录里没有 d8 启动器（或者它不可用 —— build-tools 的 `d8` 是 shell 脚本，而 Android 上
+  没有 `/bin/sh`），会回落到 `java -cp lib/d8.jar com.android.tools.r8.D8`。
+- `d8Executable` 写在 `mindustryModRoot { build { } }` 下。
+
+**部署方式。** Android 客户端读取 `/storage/emulated/0/Android/data/io.anuke.mindustry/files/mods`，但
+Android 11 起其它应用（包括 Termux）无权写入该目录，Android 14 起游戏还要求 mod 文件是只读的。所以请改为在
+游戏内导入：**模组 → 导入模组（Import mod）**，选择 `build/libs/<name>.jar`。BE 版的包名是
+`io.anuke.mindustry.be`；用 `run.androidAppId` 可切换，`run.hostPlatform`（默认 `Auto`）决定构建是否把自己
+当作 Android。Termux 通过 `TERMUX_VERSION` 或指向 `com.termux` 的 `PREFIX` 识别。
+
+**手机上建议的 gradle.properties**：
+
+```properties
+org.gradle.vfs.watch=false   # Android 无法监听文件系统，因此 -t/--continuous 不可用
+org.gradle.daemon=false      # Android 12+ 在内存紧张时会杀后台进程
+org.gradle.jvmargs=-Xmx1g
+# 本插件尚不支持 configuration cache：请不要设置 org.gradle.configuration-cache。
+```
+
+两条已对游戏源码核实的事实：
+
+- **桌面版 `Mindustry.jar` 无法在 Android aarch64 上运行**：Arc 的 SDL 后端只发布了 x86_64 Linux 与 macOS，
+  根本没有 `libsdl-arcarm64.so`。
+- 在 Android 客户端上，`MINDUSTRY_DATA_DIR` 与 `-Dmindustry.data.dir` **都无效** —— 启动器自己设定数据目录，
+  而且无法给 APK 传 JVM 参数。
+
+**暂不支持。** `runMindustry` 在 Android 上刻意不会去启动桌面 jar；无头服务器路线（跑 `server-release.jar`
+并用 `jdb`/DAP 客户端 attach 到 5005）已有设计但尚未实现。目前的 Android 工作流是：构建，然后在游戏内导入。

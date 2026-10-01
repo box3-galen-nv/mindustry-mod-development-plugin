@@ -301,3 +301,48 @@ The generated `.run/` configuration already does the equivalent: it lists the pa
 - `settings.gradle.kts` must not use `pluginManagement` for Kotlin plugin — collides with Gradle TestKit
 - `jarAndroid` needs an Android SDK: `build.androidSdkDir`, the `ANDROID_HOME`/`ANDROID_SDK_ROOT` variables, or `download.androidSdkAutoDownload`
 - CI runs the test suite on JDK 17, 21 and 25 plus `validatePlugins` (`.github/workflows/ci.yml`); no pre-commit hooks, no codegen
+
+## Android / Termux
+
+Building a mod on the phone works, and doing it in plain Termux (no container) needs **no Android SDK**:
+
+```sh
+pkg install openjdk-17 git unzip d8     # d8 is the dexer; openjdk-21 too if you run jdtls
+GRADLE_USER_HOME="$PWD/.gradle-home" ./gradlew jar jarAndroid deploy
+```
+
+- **d8 is found without an SDK.** `build.d8Executable` wins, then `d8` on the `PATH` (what `pkg install d8`
+  provides). Either one makes `jarAndroid` skip SDK resolution entirely, so nothing is downloaded. With no
+  SDK configured, an installed SDK is used if it exists, and only then is one installed.
+- `android.jar` is **optional**: without it d8 still runs and warns, because desugaring is only less
+  precise. Termux usually has no SDK at all.
+- A build-tools directory whose `d8` launcher is missing (or unusable, because its `d8` is a shell script
+  and Android has no `/bin/sh`) falls back to `java -cp lib/d8.jar com.android.tools.r8.D8`.
+- Put `d8Executable` under `mindustryModRoot { build { } }`.
+
+**Deploying.** The Android client reads `/storage/emulated/0/Android/data/io.anuke.mindustry/files/mods`,
+but since Android 11 no other app — Termux included — may write there, and since Android 14 the game also
+needs the file to be read-only. So import the built jar in the game instead: **Mods → Import mod**, and
+pick `build/libs/<name>.jar`. The BE build uses the app id `io.anuke.mindustry.be`; both are configurable
+with `run.androidAppId`, and `run.hostPlatform` (default `Auto`) decides whether the build treats itself as
+Android. Termux is recognised from `TERMUX_VERSION` or a `PREFIX` inside `com.termux`.
+
+**gradle.properties** for a phone:
+
+```properties
+org.gradle.vfs.watch=false   # Android cannot watch the file system, so -t/--continuous do not work
+org.gradle.daemon=false      # Android 12+ kills background processes when memory is tight
+org.gradle.jvmargs=-Xmx1g
+# This plugin does not support the configuration cache yet: leave org.gradle.configuration-cache unset.
+```
+
+Two findings worth knowing, both verified against the game:
+
+- The **desktop** `Mindustry.jar` cannot run on Android aarch64: Arc's SDL backend is only published for
+  x86_64 Linux and macOS, so there is no `libsdl-arcarm64.so` at all.
+- On the Android client, neither `MINDUSTRY_DATA_DIR` nor `-Dmindustry.data.dir` has any effect — its
+  launcher sets the data directory itself, and nothing can pass JVM arguments to an APK.
+
+**Not supported yet.** `runMindustry` deliberately refuses to launch the desktop jar on Android, and the
+headless-server route (run `server-release.jar` and attach `jdb`/a DAP client to port 5005) is designed but
+not implemented. Today the Android workflow is: build, then import in the game.
