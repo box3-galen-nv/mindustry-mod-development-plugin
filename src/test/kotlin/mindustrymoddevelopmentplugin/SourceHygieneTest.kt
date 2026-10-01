@@ -22,6 +22,29 @@ class SourceHygieneTest {
     private val sourceRoots = listOf(File("src/main/kotlin"), File("src/test/kotlin"))
 
     @Test
+    fun `the README examples use the current plugin version`() {
+        // The release procedure bumps gradle.properties only; nothing else notices when the README keeps
+        // advertising the old version, which is exactly what happened between 1.0.0 and 1.0.1.
+        val version = File("gradle.properties").readLines()
+            .first { it.startsWith("version=") }
+            .substringAfter('=')
+            .trim()
+        val applyLine = Regex(
+            """id\("io\.github\.box3-galen-nv\.mindustry-mod-development-plugin"\) version "([^"]+)""""
+        )
+
+        for (readme in listOf("README.md", "README_zh.md")) {
+            val text = File(readme).readText()
+            val shown = applyLine.findAll(text).map { it.groupValues[1] }.toList()
+            assertTrue(shown.isNotEmpty(), "$readme must show how to apply the plugin")
+            assertTrue(
+                shown.all { it == version },
+                "$readme advertises $shown while gradle.properties says $version",
+            )
+        }
+    }
+
+    @Test
     fun `no declaration has two doc comments`() {
         sourceRoots.forEach { root ->
             assertTrue(

@@ -16,7 +16,7 @@
 ```kotlin
 // build.gradle.kts (root)
 plugins {
-    id("io.github.box3-galen-nv.mindustry-mod-development-plugin") version "1.0.0" apply false
+    id("io.github.box3-galen-nv.mindustry-mod-development-plugin") version "1.0.1" apply false
 }
 
 repositories {
@@ -63,7 +63,7 @@ mindustryModRoot {
 // Java-only 模组请去掉 kotlin("jvm") 那一行
 plugins {
     kotlin("jvm") version "2.4.20"
-    id("io.github.box3-galen-nv.mindustry-mod-development-plugin") version "1.0.0"
+    id("io.github.box3-galen-nv.mindustry-mod-development-plugin") version "1.0.1"
 }
 
 mindustryModRoot {

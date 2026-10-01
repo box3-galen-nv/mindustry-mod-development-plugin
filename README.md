@@ -19,7 +19,7 @@ listener is reworked.
 ```kotlin
 // build.gradle.kts (root)
 plugins {
-    id("io.github.box3-galen-nv.mindustry-mod-development-plugin") version "1.0.0" apply false
+    id("io.github.box3-galen-nv.mindustry-mod-development-plugin") version "1.0.1" apply false
 }
 
 repositories {
@@ -69,7 +69,7 @@ Root project is itself a mod — no `src/<name>/` submodule needed.
 // build.gradle.kts — drop the kotlin("jvm") line for a Java-only mod
 plugins {
     kotlin("jvm") version "2.4.20"
-    id("io.github.box3-galen-nv.mindustry-mod-development-plugin") version "1.0.0"
+    id("io.github.box3-galen-nv.mindustry-mod-development-plugin") version "1.0.1"
 }
 
 mindustryModRoot {
