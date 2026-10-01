@@ -44,6 +44,8 @@ tasks/                  one internal object per task: <Name>Task.configure(...);
 - An **unterminated KDoc** (typically a leftover opening marker above a freshly written block) makes the
   compiler report impossible errors, such as unresolved references to a regex match type. The real
   diagnostic is a `Syntax error / Unclosed comment` at the *end* of the log — read the whole log.
+- **One top-level declaration per file.** Detection or factory logic belongs in that type's `companion
+  object` (`HostPlatform.detect`), never in a second top-level object, so no file declares two of them.
 - One object per task file, named after the file, with `configure(...)` doing the wiring; option holders
   are nested in it (`JarAndroidTask.Options`).
 - **Delete a declaration's doc block with the declaration.** An orphaned KDoc is valid Kotlin and stays
