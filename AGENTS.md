@@ -8,12 +8,16 @@ This file is the short list of things to know to change the code without breakin
 ## Build & test
 
 ```sh
-GRADLE_USER_HOME="$PWD/build/gradle-home" ./gradlew test          # the sandbox blocks the default Gradle home
-GRADLE_USER_HOME="$PWD/build/gradle-home" ./gradlew test --tests "*ModMeta*" --console=plain
+GRADLE_USER_HOME="$PWD/.gradle-home" ./gradlew test              # the sandbox blocks the default Gradle home
+GRADLE_USER_HOME="$PWD/.gradle-home" ./gradlew test --tests "*ModMeta*" --console=plain
 ```
 
 Test classes mirror the source package; `ProjectBuilder` for wiring tests, Gradle TestKit for real
 builds. Update `README.md` **and** `README_zh.md` when behaviour or a default changes.
+
+The Gradle user home deliberately sits at the repository root, **never inside `build/`**: `clean`
+deletes `build/`, and deleting a Gradle home that live daemons are writing to fails with an opaque OS
+error and leaves a broken cache behind. `.gradle-home/` is gitignored.
 
 Kotlin's daemon cannot write its temp files in this sandbox, so builds fall back to in-process
 compilation and print `e:` daemon lines; ignore those and read the compiler diagnostics that follow.

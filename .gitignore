@@ -6,6 +6,9 @@
 .gradle/
 .kotlin/
 
+# Local Gradle user home (see AGENTS.md), kept out of build/ so `clean` cannot delete it.
+.gradle-home/
+
 build/
 
 .opencode/
