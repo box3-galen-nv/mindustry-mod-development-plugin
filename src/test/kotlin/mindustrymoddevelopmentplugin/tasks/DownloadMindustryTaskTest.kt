@@ -188,4 +188,20 @@ class DownloadMindustryTaskTest {
             server.stop(0)
         }
     }
+
+    @Test
+    fun `a custom asset name is used for the headless server`() {
+        val base = "https://example.invalid/mindustry/releases/download"
+        // The headless server is a different release asset, and the URL has to follow that.
+        assertTrue(
+            DownloadMindustryTask.releaseUrl(base, "147", "server-release.jar") ==
+                "$base/v147/server-release.jar"
+        )
+        assertTrue(
+            DownloadMindustryTask.releaseUrl(base, "latest", "server-release.jar") ==
+                "$base/latest/download/server-release.jar"
+        )
+        // The default stays the desktop jar.
+        assertTrue(DownloadMindustryTask.releaseUrl(base, "147") == "$base/v147/Mindustry.jar")
+    }
 }

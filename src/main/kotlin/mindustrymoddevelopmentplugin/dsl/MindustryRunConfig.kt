@@ -87,12 +87,34 @@ abstract class MindustryRunConfig {
      * and is shared by every project using this plugin. When `androidSdkDir` *is* set, the SDK
      * is installed there instead — an empty configured directory is the common case.
      */
+    /**
+     * Run `server-release.jar` instead of the desktop client.
+     *
+     * The server is a plain JVM process: it is the only way to debug on Android, and it works on a desktop
+     * too (a dedicated server for testing a mod without the GUI).
+     */
+    abstract val useHeadlessServer: Property<Boolean>
+
+    /** Working directory of the headless server; its data directory is `<workingDir>/config`. */
+    abstract val headlessServerWorkingDir: DirectoryProperty
+
+    /**
+     * Where the built jar is copied when running on Android, because the game's own `Android/data`
+     * directory cannot be written by other apps on Android 11+. Import it in the game from there.
+     */
+    abstract val androidStagingDir: DirectoryProperty
+
+    /** After staging, also ask Android to launch the game (`am start`). Off by default. */
+    abstract val androidLaunchApk: Property<Boolean>
+
     abstract val androidSdkInstallDir: DirectoryProperty
 
     init {
         // gameDataDir has no convention here: its default is the root project's directory, which this
         // class cannot see. MindustryModPlugin registers it.
         hostPlatform.convention(HostPlatform.Auto)
+        useHeadlessServer.convention(false)
+        androidLaunchApk.convention(false)
         androidAppId.convention(GameDataDir.ANDROID_APP_ID)
         deployTag.convention(DEFAULT_DEPLOY_TAG)
         cleanDeployedFiles.convention(DEFAULT_CLEAN_DEPLOYED_FILES)

@@ -124,6 +124,24 @@ class MindustryModPlugin @Inject constructor(
             ),
         )
 
+        // The headless server and the staging directory live in the *root* project: one server jar and one
+        // import directory for the whole build, however many mod projects there are.
+        download.headlessJarPath.convention(
+            project.layout.file(
+                project.provider { File(project.rootProject.projectDir, "build/game/server-release.jar") },
+            ),
+        )
+        run.headlessServerWorkingDir.convention(
+            project.layout.dir(project.provider { File(project.rootProject.projectDir, "build/headless") }),
+        )
+        // Staging goes to the home directory rather than /sdcard: it is Termux-private, has no path length
+        // or shared-storage permission problems, and the game's import dialog can read it.
+        run.androidStagingDir.convention(
+            project.layout.dir(
+                project.provider { File(System.getProperty("user.home"), "AndroidStaging") },
+            ),
+        )
+
         // A relative MINDUSTRY_DATA_DIR is resolved against this *Gradle* process's working directory,
         // while the game resolves it against its own — so the plugin and the game can disagree.
         val envDataDir = System.getenv(GameDataDir.ENV_VAR)?.trim().orEmpty()
@@ -161,6 +179,21 @@ class MindustryModPlugin @Inject constructor(
                 // Captured as a plain value: the task action must not reach back into the project.
                 offline = project.gradle.startParameter.isOffline,
             )
+        }
+
+        // Root project only: there is one server jar for the whole build, and its path convention already
+        // points at the root, so a per-project task would only be noise.
+        if (project == project.rootProject) {
+            project.tasks.register("downloadHeadlessServer") { task ->
+                DownloadMindustryTask.configure(
+                    task, download.headlessJarPath.get().asFile,
+                    download.mindustryDownloadUrl.get(),
+                    download.mindustryDownloadVersion.get(),
+                    assetName = "server-release.jar",
+                    pathPropertyName = "download.headlessJarPath",
+                    offline = project.gradle.startParameter.isOffline,
+                )
+            }
         }
 
         // Resolved at task realization time, when every project has been configured — otherwise the
@@ -212,8 +245,30 @@ class MindustryModPlugin @Inject constructor(
                 warnIfDataDirUnsupported(project, download.mindustryDownloadVersion.get())
                 warnAboutAndroidBuildDefaults(project, run)
             }
+
+            val headless = if (run.useHeadlessServer.get()) {
+                warnAboutHeadlessVersionMismatch(project, download, ext)
+                if (run.gameDataDir.orNull != null) {
+                    // Saying nothing here would be the same silent-ignore bug the root-only warning exists for.
+                    project.logger.warn(
+                        "run.gameDataDir is ignored while run.useHeadlessServer is on: the server always " +
+                        "uses <headlessServerWorkingDir>/config as its data directory."
+                    )
+                }
+                RunMindustryTask.HeadlessOptions(
+                    jar = download.headlessJarPath.get().asFile,
+                    workingDir = run.headlessServerWorkingDir.get().asFile,
+                    // The path, not the bare name: a subproject's runMindustry must depend on the root's task.
+                    downloadTaskName = ":downloadHeadlessServer",
+                )
+            } else {
+                null
+            }
+            val resolvedModsDir = headless
+                ?.let { File(File(it.workingDir, "config"), "mods") }
+                ?: modsDir.get()
             RunMindustryTask.configure(
-                task, modProjects.get(), downloadPath.get(), modsDir.get(), project,
+                task, modProjects.get(), downloadPath.get(), resolvedModsDir, project,
                 run.useDeployRun.get(), run.deployTag.get(),
                 debug.maxLogFiles.get(), debug.enableRunLogging.get(),
                 dataDir = resolvedDataDir,
@@ -227,6 +282,7 @@ class MindustryModPlugin @Inject constructor(
                     suspend = project.booleanPropertyOrNull(IdeaRunConfigs.DEBUG_SUSPEND_PROPERTY)
                         ?: debug.debugSuspend.get(),
                 ),
+                headless = headless,
             )
         }
 
@@ -561,6 +617,25 @@ class MindustryModPlugin @Inject constructor(
      * directory, so the run still works — it just ignores the directory this build chose. Evaluated
      * while `runMindustry` is configured, which is before the download starts.
      */
+
+    /**
+     * The headless server is the runtime the mod is loaded into, so its version has to match the API the mod
+     * was compiled against. Mismatches surface as `NoClassDefFoundError` deep inside the game otherwise.
+     */
+    private fun warnAboutHeadlessVersionMismatch(
+        project: Project,
+        download: MindustryDownloadConfig,
+        ext: MindustryModRootExtension,
+    ) {
+        val api = ext.mindustryApiVersion.orNull?.trim()?.removePrefix("v") ?: return
+        val jar = download.mindustryDownloadVersion.get().trim().removePrefix("v")
+        if (api == jar || api == "be" || jar == "latest") return
+        project.logger.warn(
+            "The headless server downloads Mindustry \"$jar\" while mindustryApiVersion is \"$api\". " +
+            "The mod is compiled against $api and run inside $jar, which usually fails with " +
+            "NoClassDefFoundError. Set download.mindustryDownloadVersion to the same release."
+        )
+    }
 
     private fun warnIfDataDirUnsupported(project: Project, version: String) {
         // On Android the property cannot work at all, whatever the game version: AndroidLauncher overwrites

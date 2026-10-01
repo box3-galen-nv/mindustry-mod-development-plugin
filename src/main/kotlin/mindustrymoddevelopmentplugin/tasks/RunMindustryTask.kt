@@ -55,6 +55,22 @@ internal object RunMindustryTask {
      *   rather than against the project the plugin configured. The directory is created when missing,
      *   and an existing *file* at that path fails the run.
      */
+    /**
+     * Runs the game's headless server instead of the desktop client.
+     *
+     * `server-release.jar` is self-contained, sets its data directory to `<workingDir>/config`, and is an
+     * ordinary JVM — which is why this is the only Android path where JDWP (and therefore `jdb` or a DAP
+     * client) works at all.
+     */
+    class HeadlessOptions(
+        /** The server jar, downloaded by [downloadTaskName]. */
+        val jar: File,
+        /** Working directory; the server's data directory is `<workingDir>/config`. */
+        val workingDir: File,
+        /** The task that provides [jar]. */
+        val downloadTaskName: String = "downloadHeadlessServer",
+    )
+
     fun configure(
         task: JavaExec,
         modProjects: List<Project>,
@@ -67,20 +83,31 @@ internal object RunMindustryTask {
         enableRunLogging: Boolean = true,
         dataDir: File? = null,
         debug: DebugOptions = DebugOptions(),
+        headless: HeadlessOptions? = null,
     ) {
         val deployTaskName = if (useDeployRun) "deploy" else "jar"
         val prefix = "[$deployTag]"
 
-        task.dependsOn("downloadMindustry")
+        // The data directory the *game* will use: the server ignores -Dmindustry.data.dir and reads
+        // <workingDir>/config instead, so the mods have to be staged there.
+        val gameDataDir = headless?.let { File(it.workingDir, "config") } ?: dataDir
+
+        task.dependsOn(headless?.downloadTaskName ?: "downloadMindustry")
         task.dependsOn("clearMods")
         // Packaging is deliberately *not* a dependency: `gradle <packaging> runMindustry` builds first
         //     (Gradle executes command-line tasks in the given order), and a build script that wants the
         //     coupling writes `tasks.named("runMindustry") { dependsOn(":sub:deploy") }` itself. The copy
         //     below only reads the packaging task's archive path, so it works either way.
-        task.classpath = project.files(downloadPath)
-        task.mainClass.set("mindustry.desktop.DesktopLauncher")
+        if (headless == null) {
+            task.classpath = project.files(downloadPath)
+            task.mainClass.set("mindustry.desktop.DesktopLauncher")
+        } else {
+            task.classpath = project.files(headless.jar)
+            task.mainClass.set("mindustry.server.ServerLauncher")
+            task.workingDir = headless.workingDir
+        }
 
-        if (dataDir != null) {
+        if (dataDir != null && headless == null) {
             // Absolute path on purpose: the game runs `files.absolute(...)` on the value, so a
             //     relative path would resolve against the process working directory, while Gradle's
             //     default workingDir is the project directory. JavaExec treats every jvmArgs element
@@ -106,15 +133,15 @@ internal object RunMindustryTask {
         }
 
         task.doFirst { _: Task ->
-            if (dataDir != null) {
-                if (dataDir.exists() && !dataDir.isDirectory) {
+            if (gameDataDir != null) {
+                if (gameDataDir.exists() && !gameDataDir.isDirectory) {
                     throw GradleException(
                         "The game data directory '$dataDir' exists and is not a directory. " +
                         "Point run.gameDataDir at a directory (or delete the file)."
                     )
                 }
-                dataDir.mkdirs()
-                project.logger.lifecycle("Game data directory: ${dataDir.absolutePath}")
+                gameDataDir.mkdirs()
+                project.logger.lifecycle("Game data directory: ${gameDataDir.absolutePath}")
             }
 
             // Usually <dataDir>/mods now: MindustryModPlugin derives that path from the data directory

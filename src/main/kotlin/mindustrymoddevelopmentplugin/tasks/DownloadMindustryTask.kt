@@ -40,12 +40,20 @@ internal object DownloadMindustryTask {
      * @param version release to fetch, e.g. `"146"`, `"v146"` or `"latest"`
      * @param offline the build's `--offline` flag; a missing jar then fails instead of using the network
      */
-    fun configure(task: Task, target: File, baseUrl: String, version: String, offline: Boolean = false) {
-        val url = releaseUrl(baseUrl, version)
+    fun configure(
+        task: Task,
+        target: File,
+        baseUrl: String,
+        version: String,
+        assetName: String = "Mindustry.jar",
+        pathPropertyName: String = "download.mindustryGamePath",
+        offline: Boolean = false,
+    ) {
+        val url = releaseUrl(baseUrl, version, assetName)
         val stamp = stampOf(target)
 
         task.group = "mindustry"
-        task.description = "Downloads the Mindustry $version jar used by runMindustry."
+        task.description = "Downloads $assetName for Mindustry $version."
         // The URL is the input, so a version change invalidates the download even when the file name
         // does not contain {version}.
         task.inputs.property("url", url)
@@ -62,7 +70,7 @@ internal object DownloadMindustryTask {
                 } else {
                     logger.warn(
                         "'$target' is ${target.length()} bytes and does not look like a jar. " +
-                        "Delete it, or point download.mindustryGamePath elsewhere, to download the game."
+                        "Delete it, or point $pathPropertyName elsewhere, to download the game."
                     )
                 }
                 return@doLast
@@ -99,7 +107,7 @@ internal object DownloadMindustryTask {
      * release carrying that tag. `be` has no release asset at all — it is a compile-time API channel —
      * so it fails here with a message that says where it does belong.
      */
-    internal fun releaseUrl(baseUrl: String, version: String): String {
+    internal fun releaseUrl(baseUrl: String, version: String, assetName: String = "Mindustry.jar"): String {
         val trimmed = version.trim()
         if (trimmed.isEmpty()) {
             throw GradleException(
@@ -115,8 +123,8 @@ internal object DownloadMindustryTask {
                 "\"146\" or \"latest\" for download.mindustryDownloadVersion."
             )
         }
-        return if (tag == "latest") "$base/latest/download/Mindustry.jar"
-        else "$base/v$tag/Mindustry.jar"
+        return if (tag == "latest") "$base/latest/download/$assetName"
+        else "$base/v$tag/$assetName"
     }
 
     /**
