@@ -1,0 +1,479 @@
+package mindustrymoddevelopmentplugin
+
+import mindustrymoddevelopmentplugin.dsl.ArtifactNaming
+import mindustrymoddevelopmentplugin.dsl.MindustryBuildConfig
+import mindustrymoddevelopmentplugin.dsl.MindustryDownloadConfig
+import mindustrymoddevelopmentplugin.dsl.MindustryModExtension
+import mindustrymoddevelopmentplugin.dsl.MindustryModRootExtension
+import mindustrymoddevelopmentplugin.dsl.MindustryRunConfig
+import mindustrymoddevelopmentplugin.meta.ModFileReader
+import mindustrymoddevelopmentplugin.meta.ModMeta
+import mindustrymoddevelopmentplugin.tasks.JarTask
+import mindustrymoddevelopmentplugin.tasks.DeployTask
+import mindustrymoddevelopmentplugin.tasks.BuildModHJsonTask
+import mindustrymoddevelopmentplugin.tasks.ClearModsTask
+import mindustrymoddevelopmentplugin.tasks.DownloadMindustryTask
+import mindustrymoddevelopmentplugin.tasks.GenerateIdeaRunConfigsTask
+import mindustrymoddevelopmentplugin.tasks.IdeaRunConfigs
+import mindustrymoddevelopmentplugin.tasks.JarAndroidTask
+import mindustrymoddevelopmentplugin.tasks.RunMindustryTask
+import mindustrymoddevelopmentplugin.tasks.RunLogging
+import java.io.File
+import javax.inject.Inject
+import org.gradle.api.GradleException
+import org.gradle.api.Plugin
+import org.gradle.api.Project
+import org.gradle.api.logging.Logger
+import org.gradle.api.tasks.JavaExec
+import org.gradle.api.tasks.SourceSet
+import org.jetbrains.kotlin.gradle.dsl.KotlinProjectExtension
+import org.gradle.api.tasks.SourceSetContainer
+import org.gradle.api.tasks.bundling.Jar
+import org.gradle.build.event.BuildEventsListenerRegistry
+
+/**
+ * Gradle plugin for building Mindustry mods.
+ *
+ * The plugin registers two extensions on every project — `mindustryModRoot { }` (download, run,
+ * build settings) and `mindustryMod { }` plus the top-level `modMeta { }` (mod metadata) — and
+ * wires up the tasks whose bodies live in one file per task under `tasks/`
+ * (`<TaskName>Task.kt`).
+ *
+ * It works in two phases, and the split matters:
+ * - [apply] registers the extensions and the download/run tasks right away, and adds the
+ *   `afterEvaluate` hook that decides whether a project is a mod.
+ * - The mod tasks (`jar`, `jarAndroid`, `deploy`, `buildModHJson`) are registered from that hook,
+ *   because "is this a mod project?" can only be answered once the build script has run: it depends
+ *   on `modMeta.name` and on whether a metadata file exists.
+ *
+ * Values are read through `Provider`s or inside task configuration actions, never while the build
+ * script is still executing, so a DSL value always wins over its convention default.
+ */
+class MindustryModPlugin @Inject constructor(
+    /** Needed to close a leaked `runMindustry` log file when the task fails — Gradle has no `doFinally`. */
+    private val buildEvents: BuildEventsListenerRegistry,
+) : Plugin<Project> {
+
+    override fun apply(project: Project) {
+        // Once per Gradle instance, before any task can run.
+        RunLogging.registerTaskFinishListener(project, buildEvents)
+
+        registerExtensions(project)
+
+        project.afterEvaluate { configureModuleIfMod(project) }
+
+        configureRoot(project)
+    }
+
+    /**
+     * Registers `modMeta { }` and `mindustryMod { }`.
+     *
+     * Both reach the same [ModMeta] instance (see [MindustryModExtension.modMeta]), so the metadata
+     * can be configured either as a top-level block or inside `mindustryMod { }`.
+     */
+    private fun registerExtensions(project: Project) {
+        project.extensions.create("modMeta", ModMeta::class.java)
+        project.extensions.create("mindustryMod", MindustryModExtension::class.java, project)
+    }
+
+    /**
+     * Adds the mod build tasks to every project that is a mod project.
+     *
+     * The only project that is skipped is a root project without metadata: in a multi-project build
+     * the root orchestrates the build (`downloadMindustry` / `runMindustry`) and the mods live in
+     * subprojects, so the root should not package itself.
+     */
+    private fun configureModuleIfMod(project: Project) {
+        val ext = project.extensions.findByType(MindustryModExtension::class.java) ?: return
+        // Any of the engine's four metadata file names counts as metadata:
+        // mod.json / mod.hjson / plugin.json / plugin.hjson.
+        val hasModFile = ModFileReader.existingFiles(project.projectDir).isNotEmpty()
+        val isRootWithoutModConfig = project == project.rootProject &&
+            ext.modMeta.name.isBlank() && !hasModFile
+        if (isRootWithoutModConfig) return
+
+        configureModule(project, ext, hasModFile)
+    }
+
+    // =========================================================================
+    //  Download + run (every project)
+    // =========================================================================
+
+    /** Registers `mindustryModRoot { }` and the tasks that do not depend on the project being a mod. */
+    private fun configureRoot(project: Project) {
+        val ext = project.extensions.create("mindustryModRoot", MindustryModRootExtension::class.java)
+        val logger = project.logger
+        val download = ext.download
+        val run = ext.run
+        val debug = ext.debug
+
+        // Lazy on purpose: `resolveDownloadFileName` validates the template, and validating during
+        // configuration would reject a value the build script has not assigned yet.
+        val resolvedFileName = project.providers.provider { resolveDownloadFileName(download, logger) }
+
+        // The default game path depends on the version, so it is also resolved lazily.
+        download.mindustryGamePath.convention(
+            project.rootProject.layout.projectDirectory
+                .dir("build").dir("game")
+                .file(resolvedFileName.map { "$it.jar" })
+        )
+
+        // A path ending in `.jar` is used as-is; anything else is a directory that gets the file
+        // name appended.
+        val downloadPath = project.providers.provider {
+            val gameFile = download.mindustryGamePath.get().asFile
+            if (gameFile.extension == "jar") gameFile else File(gameFile, "${resolvedFileName.get()}.jar")
+        }
+
+        project.tasks.register("downloadMindustry") { task ->
+            DownloadMindustryTask.configure(
+                task, downloadPath.get(),
+                download.mindustryDownloadUrl.get(),
+                download.mindustryDownloadVersion.get(),
+                // Captured as a plain value: the task action must not reach back into the project.
+                offline = project.gradle.startParameter.isOffline,
+            )
+        }
+
+        // Resolved at task realization time, when every project has been configured — otherwise the
+        // `deploy` tasks of subprojects do not exist yet and the scan silently finds nothing.
+        //
+        // The root project is included on purpose: in single-project mode the root project *is* the mod,
+        // and `subprojects` does not contain it, so a run used to deploy nothing without saying so. A
+        // root that is not a mod simply has no `deploy` task and is filtered out here.
+        val modProjects = project.providers.provider {
+            (listOf(project.rootProject) + project.rootProject.subprojects)
+                .filter { it.tasks.findByName("deploy") != null }
+        }
+
+        // The directory the game would use by itself: MINDUSTRY_DATA_DIR, else the per-OS default.
+        val implicitDataDir = project.providers.provider { GameDataDir.resolve().absoluteFile }
+
+        // Only a directory *this build* picks needs the JVM property — the game already honours the
+        // environment variable and its own per-OS default, so passing the property for those would be
+        // redundant (and would earn a warning on a version that cannot read it). A project-local
+        // directory is simply one of the values the build script can set.
+        val chosenDataDir = project.providers.provider { run.gameDataDir.orNull?.asFile?.absoluteFile }
+
+        // The game only looks for mods under <dataDir>/mods, so that path follows the data directory;
+        // it does not have to exist yet.
+        val modsDir = project.providers.provider { File(chosenDataDir.orNull ?: implicitDataDir.get(), "mods") }
+
+        project.tasks.register("clearMods") { task ->
+            ClearModsTask.configure(
+                task, modProjects.get(), run.cleanDeployedFiles.get(),
+                run.deployTag.get(), modsDir.get(), project,
+            )
+        }
+
+        project.tasks.register("runMindustry", JavaExec::class.java) { task ->
+            val resolvedDataDir = chosenDataDir.orNull
+            if (resolvedDataDir != null) {
+                warnIfDataDirUnsupported(project, download.mindustryDownloadVersion.get())
+            }
+            RunMindustryTask.configure(
+                task, modProjects.get(), downloadPath.get(), modsDir.get(), project,
+                run.useDeployRun.get(), run.deployTag.get(),
+                debug.maxLogFiles.get(), debug.enableRunLogging.get(),
+                dataDir = resolvedDataDir,
+                debug = RunMindustryTask.DebugOptions(
+                    // The generated IDEA configuration passes -PmindustryDebug=true. A property given on
+                    //     the command line wins over the DSL in both directions, so CI can force the
+                    //     socket off for a project that enables it in `debug { }`.
+                    enabled = project.booleanPropertyOrNull(IdeaRunConfigs.DEBUG_PROPERTY)
+                        ?: debug.enableDebug.get(),
+                    port = debug.debugPort.get(),
+                    suspend = project.booleanPropertyOrNull(IdeaRunConfigs.DEBUG_SUSPEND_PROPERTY)
+                        ?: debug.debugSuspend.get(),
+                ),
+            )
+        }
+
+        // Root project only: it owns `runMindustry`, and the generated files always land in the
+        // root's `.run/`, so a subproject must not overwrite them with its own defaults.
+        if (project == project.rootProject) {
+            project.tasks.register("generateIdeaRunConfigs") { task ->
+                // The generated configuration runs the packaging task before `runMindustry`, because the
+                //     task itself no longer depends on it and a one-click IDE run should build first.
+                GenerateIdeaRunConfigsTask.configure(
+                    task, project, debug.debugPort,
+                    packagingTask = if (run.useDeployRun.get()) "deploy" else "jar",
+                )
+            }
+        }
+    }
+
+    // =========================================================================
+    //  Mod projects: compile + package
+    // =========================================================================
+
+    private fun configureModule(project: Project, ext: MindustryModExtension, hasModFile: Boolean) {
+        // Computed once and shared: the Kotlin-presence scan and the source sets must agree, and
+        //     building the list twice would walk the same paths twice.
+        val excludedSources = modSourceExcludes(
+            project.projectDir,
+            project.gradle.gradleUserHomeDir,
+            ownProjectDataDir(project),
+        )
+        val kotlin = requireKotlinPluginIfNeeded(project, excludedSources)
+        val rootExt = project.rootProject.extensions.findByType(MindustryModRootExtension::class.java)
+
+        MindustryApi.configure(project, rootExt?.mindustryApiVersion?.orNull)
+        configureSourceDirs(project, kotlin, excludedSources)
+
+        // -- Names ---------------------------------------------------------------
+        val build = rootExt?.build
+        val author = ArtifactNaming.resolveMetaValue(ext.modMeta.author, project.projectDir, "author")
+        if (author.isBlank()) {
+            project.logger.warn(
+                "Mod '${project.name}': modMeta.author is not set. " +
+                "The {author} tag in the jar name will be replaced with an empty string."
+            )
+        }
+        val names = ArtifactNaming.names(project, ext, rootExt)
+
+        val useHJson = build?.useHJson?.get() ?: MindustryBuildConfig.DEFAULT_USE_HJSON
+        val modFileName = if (useHJson) "mod.hjson" else "mod.json"
+        val generateMeta = ext.generateModMeta.get()
+        val libsDir = project.layout.buildDirectory.dir("libs").get().asFile
+
+        // -- Tasks ---------------------------------------------------------------
+        project.tasks.register("buildModHJson") { task ->
+            BuildModHJsonTask.configure(task, ext, generateMeta, useHJson, project, modFileName)
+        }
+
+        project.tasks.named("jar", Jar::class.java) { task ->
+            JarTask.configure(task, names.jar, ext, hasModFile, project, generateMeta, modFileName)
+        }
+
+        project.tasks.register("jarAndroid") { task ->
+            JarAndroidTask.configure(task, libsDir, names.jar, names.android, project, jarAndroidOptions(project, rootExt))
+        }
+
+        project.tasks.register("deploy", Jar::class.java) { task ->
+            DeployTask.configure(task, libsDir, names.jar, names.android, names.deploy, project)
+        }
+    }
+
+    /**
+     * Whether the Kotlin plugin is applied, failing when `.kt` sources exist without it.
+     *
+     * The Kotlin plugin cannot be applied for the user: `kotlin { }` accessors are generated only
+     * for plugins declared in the project's own `plugins { }` block, and applying it late is
+     * rejected by Kotlin itself. A project that ships `.kt` sources without the plugin therefore
+     * gets an error naming the first file. `java`, by contrast, can be supplied here — and must be,
+     * because the very next step adds to `compileOnly`, a configuration the Java plugin creates.
+     *
+     */
+    private fun requireKotlinPluginIfNeeded(project: Project, excluded: List<String>): KotlinProjectExtension? {
+        val kotlin = project.extensions.findByType(KotlinProjectExtension::class.java)
+        if (kotlin == null) {
+            val sources = project.fileTree(project.projectDir) { tree ->
+                tree.include("**/*.kt")
+                tree.exclude(excluded)
+            }.files
+            if (sources.isNotEmpty()) {
+                throw GradleException(
+                    "Found ${sources.size} Kotlin source file(s) " +
+                    "(first: ${sources.first().relativeTo(project.projectDir)}), " +
+                    "but the kotlin(\"jvm\") plugin is not applied.\n" +
+                    "Apply it in this project's own plugins block:\n" +
+                    "  plugins {\n" +
+                    "      kotlin(\"jvm\") version \"<version>\"\n" +
+                    "  }\n" +
+                    "A mod with no `.kt` files does not need the Kotlin plugin at all."
+                )
+            }
+        }
+        // `java-library` / `application` also bring `java`, so hasPlugin("java") covers them.
+        if (kotlin == null && !project.plugins.hasPlugin("java")) {
+            project.pluginManager.apply("java")
+        }
+        return kotlin
+    }
+
+    /**
+     * Points the source sets at the **project directory**.
+     *
+     * Sources live next to `build.gradle.kts` (single-project mode) or in the subproject root
+     * (multi-project mode, `src/<mod>/`). Registering it on the source set keeps the IDE module in
+     * sync with what is compiled. The earlier approach left the source set on the default
+     * `src/main/kotlin` and pointed `compileKotlin` at a file tree instead, so IDEA had no source
+     * root for these files and breakpoints could not be resolved onto them.
+     *
+     * `srcDir` is additive, so a build script that sets its own `srcDirs` keeps them, and
+     * `src/main/kotlin` stays valid because it lives inside the project dir.
+     */
+    private fun configureSourceDirs(project: Project, kotlin: KotlinProjectExtension?, excluded: List<String>) {
+        val sourceSets = project.extensions.getByType(SourceSetContainer::class.java)
+        val main: SourceSet = sourceSets.getByName("main")
+
+        main.java.srcDir(project.projectDir)
+        main.java.exclude(excluded)
+        // Resources stay empty on purpose: with the project dir as a resource dir, files like
+        // build.gradle.kts would end up inside the jar.
+        main.resources.setSrcDirs(emptyList<File>())
+
+        kotlin?.sourceSets?.getByName("main")?.let { mainKotlin ->
+            mainKotlin.kotlin.srcDir(project.projectDir)
+            mainKotlin.kotlin.exclude(excluded)
+        }
+    }
+
+    /** Collects the `jarAndroid` settings, falling back to the `run { }` conventions. */
+    private fun jarAndroidOptions(project: Project, rootExt: MindustryModRootExtension?): JarAndroidTask.Options {
+        val build = rootExt?.build
+        val run = rootExt?.run
+        val download = rootExt?.download
+        return JarAndroidTask.Options(
+            androidSdkDir = build?.androidSdkDir,
+            d8Args = build?.d8Args?.get().orEmpty(),
+            d8TimeoutMinutes = build?.d8TimeoutMinutes?.get() ?: MindustryBuildConfig.DEFAULT_D8_TIMEOUT_MINUTES,
+            d8DrainJoinMillis = build?.d8DrainJoinMillis?.get()
+                ?: MindustryBuildConfig.DEFAULT_D8_DRAIN_JOIN_MILLIS,
+            autoDownloadSdk = download?.androidSdkAutoDownload?.get()
+                ?: MindustryDownloadConfig.DEFAULT_ANDROID_SDK_AUTO_DOWNLOAD,
+            sdkDownloadUrl = download?.androidSdkDownloadUrl?.orNull
+                ?: MindustryDownloadConfig.commandLineToolsUrl(),
+            sdkDownloadPackages = download?.androidSdkDownloadPackages?.get()
+                ?: MindustryDownloadConfig.DEFAULT_ANDROID_SDK_DOWNLOAD_PACKAGES,
+            sdkDownloadTimeoutMinutes = download?.androidSdkDownloadTimeoutMinutes?.get()
+                ?: MindustryDownloadConfig.DEFAULT_ANDROID_SDK_DOWNLOAD_TIMEOUT_MINUTES,
+            sdkExtraArgs = download?.androidSdkExtraArgs?.get().orEmpty(),
+            sdkInstallDir = run?.androidSdkInstallDir?.orNull?.asFile
+                ?: File(project.gradle.gradleUserHomeDir, "$PLUGIN_DIR_NAME/android-sdk"),
+        )
+    }
+
+    // =========================================================================
+    //  Helpers
+    // =========================================================================
+
+    /**
+     * Directories that must never be treated as mod sources.
+     *
+     * `build/` and `.gradle/` are Gradle's own outputs. Kotlin script files are excluded too, because
+     * the Kotlin source filter matches them — without that, `build.gradle.kts` and `settings.gradle.kts`
+     * would be compiled as mod sources. (Written as a glob in the code: a literal double asterisk
+     * followed by a slash here would end this comment.)
+     *
+     * Any Gradle cache tree is excluded as well, because a Gradle user home holds extracted Kotlin
+     * files for the DSL accessors. A project-local `GRADLE_USER_HOME` would otherwise be compiled as
+     * mod source, and so would one left behind by an earlier build after the variable moved
+     * elsewhere — "Found 182 Kotlin source file(s)" is the symptom that led here.
+     *
+     * The project-local game data directory is excluded too — both its default location and any
+     * custom [dataDir] inside this project — because the game writes saves, screenshots and mods
+     * there, and none of that is mod source. Since [dataDir] is optional and usually null, the
+     * default entry is always present so a leftover directory is ignored as well.
+     *
+     * Visible for the tests that pin the exclude list.
+     */
+    internal fun modSourceExcludes(
+        projectDir: File,
+        gradleUserHome: File,
+        dataDir: File? = null,
+    ): List<String> {
+        // Always excluded: the default location, so a leftover data directory from an earlier build
+        // is not compiled as mod source either.
+        val excludes = mutableListOf("build/**", ".gradle/**", "**/*.kts", "**/caches/**", "data/**")
+        val root = projectDir.toPath()
+        val home = gradleUserHome.toPath()
+        if (home.startsWith(root) && home != root) {
+            excludes.add(root.relativize(home).toString().replace(File.separatorChar, '/') + "/**")
+        }
+        // A custom data directory inside this project is a source-root candidate too.
+        if (dataDir != null) {
+            val dataPath = dataDir.toPath()
+            if (dataPath.startsWith(root) && dataPath != root) {
+                excludes.add(root.relativize(dataPath).toString().replace(File.separatorChar, '/') + "/**")
+            }
+        }
+        return excludes
+    }
+
+    /**
+     * Data directory [project]'s own `run { }` block asks for, or null when the build leaves the choice
+     * to the game (in which case the data directory is not a source-root candidate here).
+     */
+    private fun ownProjectDataDir(project: Project): File? =
+        project.extensions.findByType(MindustryModRootExtension::class.java)?.run?.gameDataDir?.orNull?.asFile
+
+    /**
+     * Warns when the configured game version cannot read `-Dmindustry.data.dir`.
+     *
+     * A warning rather than a failure: the game falls back to `MINDUSTRY_DATA_DIR` or its own per-OS
+     * directory, so the run still works — it just ignores the directory this build chose. Evaluated
+     * while `runMindustry` is configured, which is before the download starts.
+     */
+    private fun warnIfDataDirUnsupported(project: Project, version: String) {
+        if (MindustryApi.supportsDataDir(version)) return
+        project.logger.warn(
+            "Mindustry v${version.trim().removePrefix("v")} cannot read -Dmindustry.data.dir (added in " +
+            "v147), so this run uses MINDUSTRY_DATA_DIR or the operating system's Mindustry directory " +
+            "instead of the configured gameDataDir. Set download.mindustryDownloadVersion to v147 or " +
+            "later (or \"latest\") to use it."
+        )
+    }
+
+    /**
+     * Reads a boolean project property (`-Pname=value`, `gradle.properties`, `-D`).
+     *
+     * [Project.hasProperty] is not enough: it only reports that the property exists, so
+     * `-PmindustryDebug=false` still opened the debug socket, and `-PmindustryDebugSuspend=false`
+     * made the game wait for a debugger that never attaches — the game looks hung. A property given
+     * without a value counts as enabled, which is what a command-line flag means.
+     */
+    private fun Project.booleanProperty(name: String): Boolean {
+        val text = findProperty(name)?.toString()?.trim() ?: return false
+        return text.isEmpty() || text.toBoolean()
+    }
+
+    /**
+     * Like [booleanProperty], but null when the property was not given at all.
+     *
+     * Used where a command-line switch must be able to override a DSL default in both directions:
+     * `-PmindustryDebug=false` has to win over `debug { enableDebug = true }`, which a plain
+     * `dsl || property` cannot express.
+     */
+    private fun Project.booleanPropertyOrNull(name: String): Boolean? {
+        val text = findProperty(name)?.toString()?.trim() ?: return null
+        return text.isEmpty() || text.toBoolean()
+    }
+
+    /**
+     * Substitutes `{version}` into the download file name template and validates the result.
+     *
+     * A space or one of `\ / : * ? " < > |` throws; CJK characters only warn. The `.jar` suffix is
+     * not part of the name — the caller appends it.
+     */
+    private fun resolveDownloadFileName(download: MindustryDownloadConfig, logger: Logger): String {
+        val name = download.mindustryDownloadFileName.get()
+            .replace("{version}", download.mindustryDownloadVersion.get())
+
+        val invalid = name.toCharArray().filter { it in INVALID_FILE_NAME_CHARS }
+        if (invalid.isNotEmpty()) {
+            throw GradleException(
+                "Invalid character(s) in download file name: " +
+                invalid.toSet().joinToString("") { if (it == ' ') "' '" else "'$it'" } +
+                "\nFile name: \"$name\"\n" +
+                "Avoid spaces and the following characters: \\ / : * ? \" < > |"
+            )
+        }
+
+        if (CJK_CHARS.containsMatchIn(name)) {
+            logger.warn("Download file name \"$name\" contains CJK characters. This may cause issues on some operating systems.")
+        }
+        return name
+    }
+
+    companion object {
+        /** Directory under the Gradle user home that holds the auto-installed Android SDK. */
+        private const val PLUGIN_DIR_NAME = "mindustry-mod-development-plugin"
+
+        private val INVALID_FILE_NAME_CHARS = setOf('\\', '/', ':', '*', '?', '"', '<', '>', '|', ' ')
+
+        private val CJK_CHARS =
+            Regex("[\u4e00-\u9fff\u3400-\u4dbf\u2e80-\u2eff\u2f00-\u2fdf\u3000-\u303f]")
+    }
+}

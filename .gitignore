@@ -1,0 +1,14 @@
+.DS_Store
+
+.idea/
+.vscode/
+
+.gradle/
+.kotlin/
+
+build/
+
+.opencode/
+reasonix.toml
+
+tmp/
