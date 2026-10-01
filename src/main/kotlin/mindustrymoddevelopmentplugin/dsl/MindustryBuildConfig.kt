@@ -99,22 +99,22 @@ abstract class MindustryBuildConfig {
     companion object {
 
         /** Default value of [useHJson]. */
-        val DEFAULT_USE_HJSON = false
+        const val DEFAULT_USE_HJSON = false
 
         /** Default value of [format]. */
-        val DEFAULT_FORMAT = "{name}-{version}.{build_count}"
+        const val DEFAULT_FORMAT = "{name}-{version}.{build_count}"
 
         /** Default value of [jarSuffix]. */
-        val DEFAULT_JAR_SUFFIX = "-Jar"
+        const val DEFAULT_JAR_SUFFIX = "-Jar"
 
         /** Default value of [androidSuffix]. */
-        val DEFAULT_ANDROID_SUFFIX = "-Android"
+        const val DEFAULT_ANDROID_SUFFIX = "-Android"
 
         /** Default value of [deploySuffix]. */
-        val DEFAULT_DEPLOY_SUFFIX = ""
+        const val DEFAULT_DEPLOY_SUFFIX = ""
 
         /** Default value of [timeFormat]. */
-        val DEFAULT_TIME_FORMAT = "yyyyMMdd_HHmmss"
+        const val DEFAULT_TIME_FORMAT = "yyyyMMdd_HHmmss"
 
         /** Default value of [d8Args]. */
         val DEFAULT_D8_ARGS: List<String> = emptyList()
