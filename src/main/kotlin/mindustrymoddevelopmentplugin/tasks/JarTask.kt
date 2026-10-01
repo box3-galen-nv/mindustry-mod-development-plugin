@@ -29,7 +29,10 @@ internal object JarTask {
         project: Project,
         generateMeta: Boolean,
         modFileName: String,
+        /** Only used in the error message, and captured so the action need not touch the project. */
+        projectName: String = project.name,
     ) {
+        val configuredBuildModFile = project.layout.buildDirectory.file(modFileName).get().asFile
         task.dependsOn("buildModHJson")
         task.archiveFileName.set("$jarName.jar")
         task.duplicatesStrategy = DuplicatesStrategy.EXCLUDE
@@ -40,7 +43,7 @@ internal object JarTask {
         task.doFirst {
             if (ext.modMeta.name.isBlank() && !hasModFile) {
                 throw GradleException(
-                    "No mod metadata found for project '${project.name}'.\n\n" +
+                    "No mod metadata found for project '$projectName'.\n\n" +
                     "Configure mindustryMod { } in your build.gradle.kts, " +
                     "or create a mod.hjson / mod.json file.\n\n" +
                     "Example:\n" +
@@ -57,11 +60,12 @@ internal object JarTask {
 
         // Merge runtime classpath dependencies into the jar.
         //     Directories are kept as-is; jar/zips are exploded.
-        task.from(project.providers.provider {
-            project.configurations.getByName("runtimeClasspath").files.map { file ->
-                if (file.isDirectory) file else project.zipTree(file)
-            }
-        })
+        // Resolved while configuring: the configuration cache cannot serialize a provider that reaches
+        //     back into the project, and FileTrees themselves serialize fine.
+        val runtimeTrees = project.configurations.getByName("runtimeClasspath").files.map { file ->
+            if (file.isDirectory) file else project.zipTree(file)
+        }
+        task.from(runtimeTrees)
 
         // Icon — Mindustry only reads icon.png or preview.png from the jar root.
         //     If the source is not one of these two names, rename it to icon.png.
@@ -77,7 +81,7 @@ internal object JarTask {
             }
 
             if (extension != "png" && (baseName == "icon" || baseName == "preview")) {
-                project.logger.warn(
+                task.logger.warn(
                     "Mod icon file \"$fileName\" is not a PNG image. " +
                     "Mindustry only recognizes icon.png (or preview.png as a fallback). " +
                     "The file will be renamed to $targetName in the output jar, " +
@@ -104,7 +108,7 @@ internal object JarTask {
         // Mod metadata file — either generated in build/ (generateMeta = true)
         //     or picked up from the project root (any of the engine's four file names).
         if (generateMeta) {
-            val buildModFile = project.layout.buildDirectory.file(modFileName).get().asFile
+            val buildModFile = configuredBuildModFile
             task.from(buildModFile.parentFile) { spec: CopySpec -> spec.include(buildModFile.name) }
         } else if (hasModFile) {
             // Include whichever metadata files exist — a project may ship only

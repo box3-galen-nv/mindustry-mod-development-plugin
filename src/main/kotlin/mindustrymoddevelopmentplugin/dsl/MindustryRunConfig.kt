@@ -17,11 +17,7 @@ import org.gradle.api.provider.Property
  */
 abstract class MindustryRunConfig {
 
-    // -- Where the game runs -----------------------------------------------------
-
-
     // -- Where the game stores its data ------------------------------------------
-
 
     /**
      * Directory the game keeps its user data in — `settings.bin`, `saves/`, `screenshots/`, and the
@@ -124,8 +120,6 @@ abstract class MindustryRunConfig {
     }
 
     companion object {
-
-
 
         /** Default value of [deployTag]. */
         const val DEFAULT_DEPLOY_TAG = "mm-deploy"

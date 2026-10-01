@@ -60,7 +60,7 @@ class MindustryModPlugin @Inject constructor(
 
     override fun apply(project: Project) {
         // Once per Gradle instance, before any task can run.
-        RunLogging.registerTaskFinishListener(project, buildEvents)
+        RunLogging.register(project, buildEvents)
 
         registerExtensions(project)
 
@@ -274,6 +274,8 @@ class MindustryModPlugin @Inject constructor(
                 run.useDeployRun.get(), run.deployTag.get(),
                 debug.maxLogFiles.get(), debug.enableRunLogging.get(),
                 dataDir = resolvedDataDir,
+                // Registered on demand and shared per build, so no plumbing is needed.
+                logCleanup = RunLogging.register(project, buildEvents),
                 debug = RunMindustryTask.DebugOptions(
                     // The generated IDEA configuration passes -PmindustryDebug=true. A property given on
                     //     the command line wins over the DSL in both directions, so CI can force the
@@ -368,7 +370,7 @@ class MindustryModPlugin @Inject constructor(
         }
 
         // A project may already deploy somewhere (a server, a container). Registering our own task under the
-        // same name would fail the whole build, so the user's task wins and we say what is not happening.
+        // same name would fail the whole build, so the user's task wins, and we say what is not happening.
         if (project.tasks.findByName("deploy") != null) {
             project.logger.warn(
                 "Project '${project.path}' already has a 'deploy' task, so the plugin did not add its own " +

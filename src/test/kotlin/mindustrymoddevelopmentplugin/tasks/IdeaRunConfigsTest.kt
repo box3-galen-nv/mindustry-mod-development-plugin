@@ -25,16 +25,16 @@ class IdeaRunConfigsTest {
     @Test
     fun `files names the declared outputs and write creates them`() {
         val project = project()
-        val files = IdeaRunConfigs.files(project)
+        val files = IdeaRunConfigs.files(project.rootProject.projectDir)
         assertTrue(files.size == 2, "expected two outputs, got $files")
         assertTrue(files.none { it.exists() }, "declaring outputs must not create them")
         assertTrue(files.all { it.parentFile.name == ".run" }, "outputs belong in .run/")
-        assertTrue(IdeaRunConfigs.write(project, "runMindustry", 5005) == files, "write must produce the declared outputs")
+        assertTrue(IdeaRunConfigs.write(project.rootProject.projectDir, "runMindustry", 5005) == files, "write must produce the declared outputs")
     }
 
     @Test
     fun `writes a gradle configuration and a remote debug configuration`() {
-        val files = IdeaRunConfigs.write(project(), taskName = "runMindustry", debugPort = 5010)
+        val files = IdeaRunConfigs.write(project().rootProject.projectDir, taskName = "runMindustry", debugPort = 5010)
 
         assertTrue(files.size == 2, "expected exactly two configurations, got $files")
         files.forEach { assertTrue(it.isFile, "$it should exist") }
@@ -67,8 +67,8 @@ class IdeaRunConfigsTest {
     @Test
     fun `uses stable file names so a port change leaves no stale configuration`() {
         val project = project()
-        IdeaRunConfigs.write(project, taskName = "runMindustry", debugPort = 5005)
-        val files = IdeaRunConfigs.write(project, taskName = "runMindustry", debugPort = 5011)
+        IdeaRunConfigs.write(project.rootProject.projectDir, taskName = "runMindustry", debugPort = 5005)
+        val files = IdeaRunConfigs.write(project.rootProject.projectDir, taskName = "runMindustry", debugPort = 5011)
 
         val remote = files.first { it.name.contains("attach") }
         assertTrue(remote.readText().contains("5011"), remote.readText())

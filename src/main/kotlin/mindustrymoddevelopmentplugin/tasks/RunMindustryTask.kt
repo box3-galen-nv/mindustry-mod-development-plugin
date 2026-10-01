@@ -1,5 +1,6 @@
 package mindustrymoddevelopmentplugin.tasks
 
+import org.gradle.api.provider.Provider
 import java.io.BufferedOutputStream
 import java.io.File
 import java.io.FileOutputStream
@@ -85,6 +86,7 @@ internal object RunMindustryTask {
         dataDir: File? = null,
         debug: DebugOptions = DebugOptions(),
         headless: HeadlessOptions? = null,
+        logCleanup: Provider<RunLogging.CleanupService>? = null,
     ) {
         val deployTaskName = if (useDeployRun) "deploy" else "jar"
         val prefix = "[$deployTag]"
@@ -226,7 +228,10 @@ internal object RunMindustryTask {
             standardErr?.close()
         }
         task.doLast { closeLogStreams() }
-        RunLogging.registerFailureCleanup(task) { closeLogStreams() }
+        // The path is read here, at configuration time: reaching for `task.path` inside the action would
+        // capture the Task, which the configuration cache cannot serialize.
+        val taskPath = task.path
+        logCleanup?.get()?.onFailure(taskPath) { closeLogStreams() }
     }
 
     /**

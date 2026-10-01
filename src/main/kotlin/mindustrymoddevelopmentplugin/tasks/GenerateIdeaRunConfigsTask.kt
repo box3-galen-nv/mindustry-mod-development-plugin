@@ -44,11 +44,12 @@ internal object GenerateIdeaRunConfigsTask {
         task.inputs.property("packagingTask", packagingTask)
         task.inputs.property("debugPort", debugPort)
         task.inputs.property("templateRevision", IdeaRunConfigs.TEMPLATE_REVISION)
-        task.outputs.files(IdeaRunConfigs.files(project))
+        val rootProjectDir = project.rootProject.projectDir
+        task.outputs.files(IdeaRunConfigs.files(rootProjectDir))
 
         task.doLast {
             val written = IdeaRunConfigs.write(
-                project,
+                rootProjectDir,
                 taskName = taskName,
                 debugPort = debugPort.get(),
                 packagingTask = packagingTask,

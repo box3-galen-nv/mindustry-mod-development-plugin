@@ -35,9 +35,11 @@ internal object BuildModHJsonTask {
 
         // Declare inputs and outputs so the task is UP-TO-DATE when nothing changed.
         //     Inputs = DSL field snapshot + existing metadata files (the back-fill source).
-        task.inputs.property("modMeta", project.provider { ext.modMeta.inputSnapshot() })
+        // Evaluated here: a provider that captures the project cannot be serialized by the
+        //     configuration cache, and the snapshot is a plain string anyway.
+        task.inputs.property("modMeta", ext.modMeta.inputSnapshot())
         task.inputs.property("useHJson", useHJson)
-        task.inputs.files(project.provider { ModFileReader.existingFiles(project.projectDir) })
+        task.inputs.files(ModFileReader.existingFiles(project.projectDir))
         task.outputs.file(buildModFile)
 
         task.doLast { _: Task ->
@@ -46,10 +48,12 @@ internal object BuildModHJsonTask {
             //     plugin.hjson, engine priority), so enabling generateModMeta does not
             //     silently drop metadata that is only present in the file.
             //     DSL values always win (see ModMeta.fillMissingFrom).
-            ModFileReader.existingFiles(project.projectDir).firstOrNull()?.let { file ->
+            // Captured as a plain File: an action may not reach back into the project.
+            val projectDir = project.projectDir
+            ModFileReader.existingFiles(projectDir).firstOrNull()?.let { file ->
                 runCatching { file.readText() }
                     .onSuccess { ext.modMeta.fillMissingFrom(it) }
-                    .onFailure { project.logger.warn("Could not read ${file.name} for metadata back-fill: $it") }
+                    .onFailure { task.logger.warn("Could not read ${file.name} for metadata back-fill: $it") }
             }
             val content = if (useHJson) ext.modMeta.toHJson() else ext.modMeta.toJson()
             val file = buildModFile.get().asFile

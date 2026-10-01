@@ -34,13 +34,13 @@ internal object IdeaRunConfigs {
 
     /** Writes (or refreshes) both configurations and returns the files created. */
     fun write(
-        project: Project,
+        rootProjectDir: File,
         taskName: String,
         debugPort: Int,
         packagingTask: String = "deploy",
         warn: (String) -> Unit = {},
     ): List<File> {
-        val (gradleConfig, remoteConfig) = files(project)
+        val (gradleConfig, remoteConfig) = files(rootProjectDir)
         gradleConfig.parentFile.mkdirs()
         // IDEA writes its own edits back into these files, so overwriting one silently would throw away
         // whatever the user configured there (a JDK, an environment variable). Say so instead.
@@ -62,8 +62,8 @@ internal object IdeaRunConfigs {
      * `generateIdeaRunConfigs` declares both as its outputs, which is what makes it UP-TO-DATE while
      * nothing changed.
      */
-    fun files(project: Project): List<File> =
-        fileNames().map { File(File(project.rootProject.projectDir, DIR), it) }
+    fun files(rootProjectDir: File): List<File> =
+        fileNames().map { File(File(rootProjectDir, DIR), it) }
 
     /**
      * Revision of the XML below, declared as a task input.

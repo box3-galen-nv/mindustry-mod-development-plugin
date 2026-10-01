@@ -152,31 +152,37 @@ class MindustryRunMindustryTest {
     @Test
     fun `failure cleanup runs once when the task fails and is dropped afterwards`() {
         val project = ProjectBuilder.builder().build()
+        val service = project.gradle.sharedServices
+            .registerIfAbsent("test-cleanup", RunLogging.CleanupService::class.java) { }
+            .get()
         val task = project.tasks.register("logged").get()
         var closed = 0
-        RunLogging.registerFailureCleanup(task) { closed++ }
+        service.onFailure(task.path) { closed++ }
 
         // A successful task must not run the cleanup (doLast already closed the file) …
-        RunLogging.onTaskFinished(task.path, failed = false)
+        service.onTaskFinished(task.path, failed = false)
         assertTrue(closed == 0, "cleanup must not run on success, ran $closed time(s)")
 
         // … and its entry is gone, so nothing accumulates across tasks or builds.
-        RunLogging.onTaskFinished(task.path, failed = true)
+        service.onTaskFinished(task.path, failed = true)
         assertTrue(closed == 0, "the entry must be consumed by the first finish event")
     }
 
     @Test
     fun `failure cleanup runs when the task fails`() {
         val project = ProjectBuilder.builder().build()
+        val service = project.gradle.sharedServices
+            .registerIfAbsent("test-cleanup", RunLogging.CleanupService::class.java) { }
+            .get()
         val task = project.tasks.register("logged-failing").get()
         var closed = 0
-        RunLogging.registerFailureCleanup(task) { closed++ }
+        service.onFailure(task.path) { closed++ }
 
-        RunLogging.onTaskFinished(task.path, failed = true)
+        service.onTaskFinished(task.path, failed = true)
         assertTrue(closed == 1, "cleanup must run exactly once, ran $closed time(s)")
 
         // An unrelated task path is a no-op.
-        RunLogging.onTaskFinished(":other", failed = true)
+        service.onTaskFinished(":other", failed = true)
         assertTrue(closed == 1)
     }
 
