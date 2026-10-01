@@ -93,8 +93,14 @@ tasks/                  one internal object per task: <Name>Task.configure(...);
   from one the user put there (never replaced, only reported when it cannot be a jar). `clearMods`
   matches the deploy tag plus a regex derived from `build.format`, and deletes nothing when the mod name
   cannot be resolved.
-- **The mod-subproject scan** (`subprojects.filter { it.tasks.findByName("deploy") != null }`) must run at
-  task-realization time, not in `afterEvaluate`, or the root `runMindustry` silently deploys nothing.
+- **The mod-project scan** (`(listOf(rootProject) + rootProject.subprojects).filter { it.tasks.findByName("deploy") is Jar }`)
+  must run at task-realization time, not in `afterEvaluate`, or the root `runMindustry` silently deploys
+  nothing. The root project is included because single-project mode makes it the mod, and the `is Jar` test
+  keeps a project's own unrelated `deploy` task out of it. Registering our `deploy` is skipped with a
+  warning when that name is already taken.
+- **Root-only settings on a subproject are reported, not silently ignored**: `mindustryApiVersion` and the
+  whole `build { }` block come from the root project (they name the artifacts and pick the API for the whole
+  build), while `run { }` is per project; `warnAboutRootOnlySettings` names the offending properties.
 - **`modMeta` is its own extension**, created before `afterEvaluate` because `isRootWithoutModConfig`, the
   guard that keeps a multi-project root from configuring itself twice, reads `modMeta.name`. A root
   project may also be a mod (single-project mode), which is what makes that guard necessary.

@@ -7,9 +7,11 @@
 
 ---
 
-# 使用方法
+## 使用方法
 
-# 引入插件
+### 引入插件
+
+插件发布在 [Gradle Plugin Portal](https://plugins.gradle.org/) 上，Gradle 默认就会去那里找，因此**无需**为它声明仓库。目前**不支持 configuration cache**：请用 `--no-configuration-cache`（或不要开启 `org.gradle.configuration.cache`），等日志监听器重做后再启用。
 
 ```kotlin
 // build.gradle.kts (root)
@@ -53,7 +55,7 @@ mindustryModRoot {
 > `com.github.Anuken.Arc:arc-core:6aee8e7686` 这个没有任何仓库提供的 commit hash（而 Gradle 会优先选它）；
 > 第三方的 Zelaux/MindustryRepo 镜像也不自足（且它最新的 v156.1 的 module 元数据里残留了合并冲突标记，Gradle 直接拒绝解析）—— 它的 `core:v146` POM 需要 `org.lz4:lz4-java`。资产路线两个问题都没有。
 
-# 单项目模式
+### 单项目模式
 
 根项目自身就是模组，无需 `src/<name>/` 子模块。
 
@@ -86,7 +88,7 @@ mindustryMod {
 Kotlin 脚本（`*.kts`）永远不参与模组源码编译。`.java` 由 `kotlin("jvm")` 顺带应用的 Java 插件编译，
 所以项目需要应用 Kotlin 或某个 Java 插件 —— 应用 Kotlin 时 Java 已经就位。
 
-# 多项目模式
+### 多项目模式
 
 每个模组以子项目形式放在 `src/<name>/` 下。
 
@@ -103,9 +105,9 @@ project/
 
 ---
 
-# 扩展配置
+## 扩展配置
 
-# 仅根项目
+### 仅根项目
 
 | 属性 | 类型 | 默认值 | 说明 |
 |----------|------|---------|----|
@@ -135,7 +137,7 @@ project/
 | `build.d8TimeoutMinutes` | `Long` | `30` | `d8` 子进程超时，单位**分钟** |
 | `build.d8DrainJoinMillis` | `Long` | `5000` | 等待 d8 输出 drain 线程的时长（毫秒，不是 d8 超时） |
 
-# 日志与调试
+### 日志与调试
 
 | 属性 | 类型 | 默认值 | 说明 |
 |----------|------|---------|----|
@@ -148,7 +150,7 @@ project/
 单次运行传入的属性会**双向**覆盖这里的默认值：项目里开了 `enableDebug`，也可以用
 `-PmindustryDebug=false`（CI 里推荐）把它关掉；裸写 `-PmindustryDebug` 视为开启。生成的 Gradle 运行配置传的就是 `=true`。
 
-# 游戏数据目录
+#### 游戏数据目录
 
 数据目录决定游戏把 `settings.bin`、`saves/`、`maps/`、`schematics/`、`screenshots/` 放在哪里 —— 也决定插件把模组部署到哪里，因为 Mindustry 只在 `<数据目录>/mods` 里找模组（目录不存在时会自动创建）。你不配置时，插件按游戏自己的规则解析同一个目录：设置了 `MINDUSTRY_DATA_DIR` 就用它，否则用系统位置（`~/Library/Application Support/Mindustry`、`%AppData%/Mindustry`、`~/.local/share/Mindustry`）。**`mindustryModsDir` 已删除**：mods 目录永远跟随数据目录。
 
@@ -156,13 +158,13 @@ project/
 
 注意：`data/` 在 `build/` 之外，`./gradlew clean` 不会删它 —— 建议自己加进 `.gitignore`。你指定的目录是**全新空目录**：原存档与设置留在原处，插件不复制。两个实例共用一个数据目录会争 `settings.bin` 与 `saves/`，请各给一个 `gameDataDir`。项目根下的该目录会被排除出 mod 源码扫描，里面的 `.kt`/`.java` 不会被编译进 jar。该属性由 `ClientLauncher` 读取，所以专用无头服务端不认它（本插件也不会启动服务端），Android/iOS 同样不受影响。
 
-# Android SDK 自动安装
+#### Android SDK 自动安装
 
 `jarAndroid` 需要一个含 `platforms/<ver>/android.jar` 与 `build-tools/<ver>/d8` 的 SDK。当解析出的 SDK 无法满足 `download.androidSdkDownloadPackages` 时（缺失、为空、或**版本不对**），插件会从配置的渠道下载官方命令行工具，并用 `sdkmanager` 安装这些包（license 自动接受）。安装位置：配置了 `build.androidSdkDir` 就用它（目录不存在或为空则创建），否则用 `run.androidSdkInstallDir`；在别处（如 `ANDROID_HOME`）找到的 SDK 只按原样使用，绝不改动。它默认关闭，构建不会擅自开始几百 MB 的下载：需要时用 `download { androidSdkAutoDownload = true }` 开启，否则 `jarAndroid` 会像以前一样报错并列出所有探测过的位置。用镜像时：命令行工具由 `androidSdkDownloadUrl` 指定为镜像地址；`sdkmanager` 的包下载则需要在 `androidSdkExtraArgs` 里指定镜像作为 HTTP 代理（`--proxy=http --proxy_host=<host> --proxy_port=<port>`，镜像只支持 HTTP 时再加 `--no_https`）—— `sdkmanager` 读的是 Google 自己的包列表，这个代理是唯一能让包下载改道的途径。
 
 > `sdkmanager` 会把仓库清单缓存在 `$ANDROID_USER_HOME/cache`（默认 `~/.android/cache`），该路径不可写时它会**误报成"下载失败"**（容器/沙箱里的真实坑）。除非环境已设置 `ANDROID_USER_HOME`，插件会把它重定向到 `<sdk>/.android-user`。
 
-# 在 IDEA 中调试
+#### 在 IDEA 中调试
 
 两个运行配置由**一个独立任务**写入 `<root>/.run/`：它不依赖任何任务、也没有任务依赖它，且在**执行时**才读取 `debugPort`，所以 DSL 里的值会正确落到文件里。跑一次即可（IDEA 需要文件先存在才能点）：
 
@@ -181,9 +183,9 @@ project/
 - `debug { }` 提供默认值（`enableDebug`、`debugPort`、`debugSuspend`），单次运行传入的属性会**双向**覆盖它们。生成的配置传 `-PmindustryDebug=true`；想断在启动期代码就给那次运行再加 `-PmindustryDebugSuspend=true`；CI 里用 `-PmindustryDebug=false`（或写进 `gradle.properties`）强制关闭。
 - 该任务没有依赖、也没人依赖它，只有你主动调用才会运行；若完全不想要它，用 `tasks.named("generateIdeaRunConfigs") { enabled = false }` 关掉。没有变化时任务是 UP-TO-DATE —— 这点很重要，因为 IDEA 同步时也会改写这些文件，两者不再互相打架。
 
-# 模组项目
+### 模组项目
 
-# 元数据
+#### 元数据
 
 `modMeta { }` 注册为**项目级顶层扩展**，与 `mindustryMod { }` 平级而不是嵌套其中。
 `mindustryMod { modMeta { ... } }` 的旧写法依然可用，配置的是同一个对象。
@@ -214,7 +216,7 @@ project/
 
 > 已覆盖引擎 `Mods.ModMeta` 的全部 19 个字段；`internalName` 为派生字段（不是 `mod.hjson` 的键）。
 
-# 文件路径
+#### 文件路径
 
 | 属性 | 类型 | 默认值 | 说明 |
 |----------|------|---------|----|
@@ -224,7 +226,7 @@ project/
 | `assets` | `ConfigurableFileCollection` | `<projectDir>/assets/` | 支持多个目录 |
 | `generateModMeta` | `Boolean` | `false` | 自动生成元数据文件，未配置的字段从已有元数据文件回填 |
 
-# 元数据回填
+#### 元数据回填
 
 `generateModMeta = true` 时，仍为默认值的字段会从项目根目录已有的元数据文件回填，因此逐步迁移到 DSL 不会丢掉只写在文件里的元数据。DSL 中显式配置的值始终优先。由于"未配置"是按"等于默认值"判定的，把字段**显式设成默认值**无法覆盖文件里的值。
 
@@ -232,7 +234,7 @@ project/
 
 ---
 
-# 可用任务
+## 可用任务
 
 | 任务 | 项目 | 说明 |
 |------|---------|----|
@@ -256,13 +258,13 @@ tasks.named("runMindustry") { dependsOn(":sub:deploy") }   // 每个模组项目
 插件生成的 `.run/` 配置已经等价地做了这件事：里面的任务列表是"打包任务 + `runMindustry`"，
 所以在 IDE 里点一下会先构建。
 
-# 增量构建
+#### 增量构建
 
 `buildModHJson` 与 `jarAndroid` 都声明了输入输出，没有变化时会跳过；三个 jar（`-Jar`、`-Android`、合并后的）都保留在 `build/libs/`。默认 `build.format` 含 `{build_count}`，会让每次构建的产物名都不同 —— 想让 `jar`/`deploy` 也能 UP-TO-DATE，就去掉它（`format = "{name}-{version}"`）。
 
 ---
 
-# 构建
+## 构建
 
 ```sh
 ./gradlew test       # 运行全部测试 (JUnit 5)
@@ -271,7 +273,7 @@ tasks.named("runMindustry") { dependsOn(":sub:deploy") }   // 每个模组项目
 
 ---
 
-# 注意事项
+## 注意事项
 
 - 不要在 `settings.gradle.kts` 中用 `pluginManagement` 指定 Kotlin 插件版本，会和 TestKit 冲突
 - `jarAndroid` 需要 Android SDK：可用 `build.androidSdkDir`、`ANDROID_HOME`/`ANDROID_SDK_ROOT` 环境变量，或 `download.androidSdkAutoDownload`
