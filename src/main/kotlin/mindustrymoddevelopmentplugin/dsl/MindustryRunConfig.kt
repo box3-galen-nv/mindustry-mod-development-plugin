@@ -1,5 +1,6 @@
 package mindustrymoddevelopmentplugin.dsl
 
+import mindustrymoddevelopmentplugin.GameDataDir
 import org.gradle.api.file.DirectoryProperty
 import org.gradle.api.provider.Property
 
@@ -34,6 +35,19 @@ abstract class MindustryRunConfig {
      * project-local directory write `gameDataDir = layout.projectDirectory.dir("data")`. That property exists from Mindustry
      * **v147**; an older game only gets a warning and falls back to the variable or its own default.
      */
+    abstract val hostPlatform: Property<HostPlatform>
+
+    /**
+     * The Android application id whose `files` directory holds the game data, used when
+     * [hostPlatform] is [HostPlatform.Android]. The BE build uses `io.anuke.mindustry.be`.
+     */
+    abstract val androidAppId: Property<String>
+
+    /**
+     * Where this build is expected to run: [HostPlatform.Auto] decides from the environment, and setting
+     * it explicitly is how a desktop CI job describes a Termux target (or the other way round).
+     */
+
     abstract val gameDataDir: DirectoryProperty
 
     /**
@@ -78,6 +92,8 @@ abstract class MindustryRunConfig {
     init {
         // gameDataDir has no convention here: its default is the root project's directory, which this
         // class cannot see. MindustryModPlugin registers it.
+        hostPlatform.convention(HostPlatform.Auto)
+        androidAppId.convention(GameDataDir.ANDROID_APP_ID)
         deployTag.convention(DEFAULT_DEPLOY_TAG)
         cleanDeployedFiles.convention(DEFAULT_CLEAN_DEPLOYED_FILES)
         useDeployRun.convention(DEFAULT_USE_DEPLOY_RUN)

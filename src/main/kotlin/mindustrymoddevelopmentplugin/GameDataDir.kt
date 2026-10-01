@@ -1,6 +1,8 @@
 package mindustrymoddevelopmentplugin
 
 import java.io.File
+import mindustrymoddevelopmentplugin.dsl.HostPlatform
+import mindustrymoddevelopmentplugin.dsl.HostPlatformDetector
 import org.gradle.api.GradleException
 
 /**
@@ -15,6 +17,15 @@ internal object GameDataDir {
     /** Engine variable that overrides the data directory; honoured by the game since v126. */
     const val ENV_VAR = "MINDUSTRY_DATA_DIR"
 
+    /** The Android client's application id; the BE build rewrites it to `io.anuke.mindustry.be`. */
+    const val ANDROID_APP_ID = "io.anuke.mindustry"
+
+    /**
+     * `/storage/emulated/0/Android/data/<appId>/files` — what `getExternalFilesDir(null)` returns on
+     * Android, and the only data directory the APK ever uses.
+     */
+    fun androidDataDir(appId: String): File = File("/storage/emulated/0/Android/data/$appId/files")
+
     /**
      * Returns the data directory, preferring [env] over the per-OS location.
      *
@@ -24,13 +35,21 @@ internal object GameDataDir {
      * @throws GradleException on an operating system whose directory is not known, naming the DSL
      *   property to set instead of guessing.
      */
+
     fun resolve(
         env: String? = System.getenv(ENV_VAR),
         osName: String = System.getProperty("os.name"),
         userHome: String = System.getProperty("user.home"),
         appData: String? = System.getenv("APPDATA"),
+        hostPlatform: HostPlatform = HostPlatformDetector.detect(),
+        androidAppId: String = ANDROID_APP_ID,
     ): File {
         if (!env.isNullOrBlank()) return File(env)
+
+        // Android comes first because `os.name` says "Linux" there too, which would give the desktop path.
+        // The client ignores both MINDUSTRY_DATA_DIR and -Dmindustry.data.dir: AndroidLauncher sets the data
+        // directory to getExternalFilesDir(null) unconditionally, and that is this path.
+        if (hostPlatform == HostPlatform.Android) return androidDataDir(androidAppId)
 
         val os = osName.lowercase()
         return when {

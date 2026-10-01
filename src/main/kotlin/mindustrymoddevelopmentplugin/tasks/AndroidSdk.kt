@@ -136,18 +136,88 @@ internal object AndroidSdk {
     }
 
     /**
+     * Locates a d8 command *without needing an Android SDK*, in this order:
+     *
+     * 1. [configured] — `build.d8Executable`, the explicit override;
+     * 2. `d8` on [pathEnv] — what `pkg install d8` provides on Termux;
+     * 3. the SDK's newest `build-tools`, as `d8`, `d8.bat`, or `lib/d8.jar`.
+     *
+     * The result is a **command prefix**, because the last case is not an executable: build-tools ships a
+     * `d8` shell script wrapping `lib/d8.jar`, and Android has no `/bin/sh`, so that script cannot run
+     * there while the jar always can. Prefixes are also why [buildD8Command] takes a list.
+     *
+     * @return the prefix, or null when no d8 exists anywhere.
+     */
+    fun resolveD8(
+        configured: File?,
+        pathEnv: String?,
+        sdkRoot: File?,
+        osName: String = System.getProperty("os.name"),
+    ): List<String>? {
+        if (configured != null && configured.isFile) return executableOrJar(configured)
+        onPath("d8", pathEnv, osName)?.let { return listOf(it.absolutePath) }
+
+        val buildTools = sdkRoot?.let { File(it, "build-tools") }
+            ?.listFiles()
+            ?.filter { it.isDirectory }
+            ?.filter {
+                File(it, "d8").exists() || File(it, "d8.bat").exists() || File(it, "lib/d8.jar").exists()
+            }
+            ?.maxWithOrNull(Comparator(::compareSdkVersions))
+            ?: return null
+
+        return when {
+            File(buildTools, "d8").exists() -> listOf(File(buildTools, "d8").absolutePath)
+            File(buildTools, "d8.bat").exists() -> listOf(File(buildTools, "d8.bat").absolutePath)
+            else -> executableOrJar(File(buildTools, "lib/d8.jar"))
+        }
+    }
+
+    /** `<sdk>/platforms/<newest>/android.jar`, or null: d8 works without it, just less precisely. */
+    fun findAndroidJar(sdkRoot: File): File? =
+        File(sdkRoot, "platforms").listFiles()
+            ?.filter { it.isDirectory && File(it, "android.jar").exists() }
+            ?.maxWithOrNull(Comparator(::compareSdkVersions))
+            ?.let { File(it, "android.jar") }
+
+    /** A `.jar` given as the d8 command has to go through the JVM; anything else is run directly. */
+    private fun executableOrJar(file: File): List<String> =
+        if (file.extension.equals("jar", ignoreCase = true)) {
+            listOf(javaExecutable(), "-cp", file.absolutePath, "com.android.tools.r8.D8")
+        } else {
+            listOf(file.absolutePath)
+        }
+
+    /** The JVM running the build, so the `lib/d8.jar` fallback does not depend on `java` being on PATH. */
+    private fun javaExecutable(): String {
+        val executable = if (System.getProperty("os.name").lowercase().contains("win")) "java.exe" else "java"
+        return File(File(System.getProperty("java.home"), "bin"), executable).absolutePath
+    }
+
+    /** First executable named [name] (plus the Windows launcher suffixes) in the `PATH`-style [pathEnv]. */
+    private fun onPath(name: String, pathEnv: String?, osName: String): File? {
+        if (pathEnv.isNullOrBlank()) return null
+        val suffixes = if (osName.lowercase().contains("win")) listOf(".exe", ".bat", ".cmd", "") else listOf("")
+        return pathEnv.split(File.pathSeparatorChar)
+            .filter { it.isNotBlank() }
+            .asSequence()
+            .flatMap { dir -> suffixes.asSequence().map { File(dir, name + it) } }
+            .firstOrNull { it.isFile }
+    }
+
+    /**
      * Assemble the d8 command line. Custom [extraArgs] are inserted after the defaults
      * (`--min-api` etc.) so they can override them, and before `--output`.
      */
     fun buildD8Command(
-        d8Binary: String,
+        d8Command: List<String>,
         deps: Collection<File>,
         minApi: Int = 14,
         extraArgs: List<String> = emptyList(),
         output: File,
         input: File,
     ): List<String> {
-        val args = mutableListOf(d8Binary)
+        val args = d8Command.toMutableList()
         deps.forEach { args.add("--classpath"); args.add(it.absolutePath) }
         args.add("--min-api"); args.add(minApi.toString())
         args.addAll(extraArgs)

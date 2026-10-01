@@ -1,6 +1,7 @@
 package mindustrymoddevelopmentplugin
 
 import java.io.File
+import mindustrymoddevelopmentplugin.dsl.HostPlatform
 import org.gradle.api.GradleException
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue
@@ -62,5 +63,55 @@ class GameDataDirTest {
 
         assertTrue(error.message!!.contains("Plan9"), error.message!!)
         assertTrue(error.message!!.contains("gameDataDir"), error.message!!)
+    }
+
+    @Test
+    fun `termux resolves to the Android external files directory`() {
+        // The APK's own choice: AndroidLauncher sets the data directory to getExternalFilesDir(null), and
+        // nothing can override it. `os.name` is "Linux" there too, which is why this branch comes first.
+        assertEquals(
+            File("/storage/emulated/0/Android/data/io.anuke.mindustry/files"),
+            GameDataDir.resolve(
+                osName = "Linux",
+                userHome = "/data/data/com.termux/files/home",
+                hostPlatform = HostPlatform.Android,
+            ),
+        )
+    }
+
+    @Test
+    fun `the android app id is configurable for the BE build`() {
+        assertEquals(
+            File("/storage/emulated/0/Android/data/io.anuke.mindustry.be/files"),
+            GameDataDir.resolve(
+                osName = "Linux",
+                hostPlatform = HostPlatform.Android,
+                androidAppId = "io.anuke.mindustry.be",
+            ),
+        )
+    }
+
+    @Test
+    fun `an explicit environment variable still wins on android`() {
+        assertEquals(
+            File("/tmp/forced"),
+            GameDataDir.resolve(
+                env = "/tmp/forced",
+                osName = "Linux",
+                hostPlatform = HostPlatform.Android,
+            ),
+        )
+    }
+
+    @Test
+    fun `a plain linux desktop is not treated as android`() {
+        assertEquals(
+            File("/home/someone/.local/share/Mindustry"),
+            GameDataDir.resolve(
+                osName = "Linux",
+                userHome = "/home/someone",
+                hostPlatform = HostPlatform.Desktop,
+            ),
+        )
     }
 }

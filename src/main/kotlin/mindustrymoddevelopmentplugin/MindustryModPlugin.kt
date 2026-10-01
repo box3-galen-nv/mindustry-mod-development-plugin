@@ -1,5 +1,6 @@
 package mindustrymoddevelopmentplugin
 
+import mindustrymoddevelopmentplugin.dsl.HostPlatform
 import mindustrymoddevelopmentplugin.dsl.ArtifactNaming
 import mindustrymoddevelopmentplugin.dsl.MindustryBuildConfig
 import mindustrymoddevelopmentplugin.dsl.MindustryDownloadConfig
@@ -177,7 +178,12 @@ class MindustryModPlugin @Inject constructor(
         }
 
         // The directory the game would use by itself: MINDUSTRY_DATA_DIR, else the per-OS default.
-        val implicitDataDir = project.providers.provider { GameDataDir.resolve().absoluteFile }
+        val implicitDataDir = project.providers.provider {
+            GameDataDir.resolve(
+                hostPlatform = run.hostPlatform.get(),
+                androidAppId = run.androidAppId.get(),
+            ).absoluteFile
+        }
 
         // Only a directory *this build* picks needs the JVM property — the game already honours the
         // environment variable and its own per-OS default, so passing the property for those would be
@@ -204,6 +210,7 @@ class MindustryModPlugin @Inject constructor(
             val resolvedDataDir = chosenDataDir.orNull
             if (resolvedDataDir != null) {
                 warnIfDataDirUnsupported(project, download.mindustryDownloadVersion.get())
+                warnAboutAndroidBuildDefaults(project, run)
             }
             RunMindustryTask.configure(
                 task, modProjects.get(), downloadPath.get(), modsDir.get(), project,
@@ -226,13 +233,17 @@ class MindustryModPlugin @Inject constructor(
         // Root project only: it owns `runMindustry`, and the generated files always land in the
         // root's `.run/`, so a subproject must not overwrite them with its own defaults.
         if (project == project.rootProject) {
-            project.tasks.register("generateIdeaRunConfigs") { task ->
-                // The generated configuration runs the packaging task before `runMindustry`, because the
-                //     task itself no longer depends on it and a one-click IDE run should build first.
-                GenerateIdeaRunConfigsTask.configure(
-                    task, project, debug.debugPort,
-                    packagingTask = if (run.useDeployRun.get()) "deploy" else "jar",
-                )
+            // IDEA's .run/*.xml describes a desktop JVM: on Android the editor is Neovim/jdtls and the
+            // debugger attaches to a headless server, so generating them would only be noise.
+            if (run.hostPlatform.get() != HostPlatform.Android) {
+                project.tasks.register("generateIdeaRunConfigs") { task ->
+                    // The generated configuration runs the packaging task before `runMindustry`, because the
+                    //     task itself no longer depends on it and a one-click IDE run should build first.
+                    GenerateIdeaRunConfigsTask.configure(
+                        task, project, debug.debugPort,
+                        packagingTask = if (run.useDeployRun.get()) "deploy" else "jar",
+                    )
+                }
             }
         }
     }
@@ -394,6 +405,16 @@ class MindustryModPlugin @Inject constructor(
             d8TimeoutMinutes = build?.d8TimeoutMinutes?.get() ?: MindustryBuildConfig.DEFAULT_D8_TIMEOUT_MINUTES,
             d8DrainJoinMillis = build?.d8DrainJoinMillis?.get()
                 ?: MindustryBuildConfig.DEFAULT_D8_DRAIN_JOIN_MILLIS,
+            // `build.d8Executable` always wins. The PATH is only consulted when the project did *not* name an
+            // SDK directory: a configured `androidSdkDir` is an explicit instruction, and a project that
+            // points it at an empty directory expects that one to be installed rather than silently using
+            // whatever d8 happens to be on the PATH. With no SDK configured — Termux, where `pkg install d8`
+            // is the whole setup — the PATH is exactly what should be used, and no SDK is touched.
+            d8Command = AndroidSdk.resolveD8(
+                configured = build?.d8Executable?.orNull?.asFile,
+                pathEnv = if (build?.androidSdkDir?.orNull != null) null else System.getenv("PATH"),
+                sdkRoot = null,
+            ),
             autoDownloadSdk = download?.androidSdkAutoDownload?.get()
                 ?: MindustryDownloadConfig.DEFAULT_ANDROID_SDK_AUTO_DOWNLOAD,
             sdkDownloadUrl = download?.androidSdkDownloadUrl?.orNull
@@ -507,13 +528,54 @@ class MindustryModPlugin @Inject constructor(
         project.extensions.findByType(MindustryModRootExtension::class.java)?.run?.gameDataDir?.orNull?.asFile
 
     /**
+     * Names the two Gradle defaults that do not fit Android, without changing them.
+     *
+     * Android cannot watch the file system, and Android 12+ kills background processes when memory is
+     * tight, which together make `-t`/`--continuous` unusable and make daemons vanish for no visible
+     * reason. Editing the user's build settings silently would be worse than one line of advice.
+     */
+    private fun warnAboutAndroidBuildDefaults(project: Project, run: MindustryRunConfig) {
+        if (project != project.rootProject) return
+        if (run.hostPlatform.get() != HostPlatform.Android) return
+        val missing = buildList {
+            if (!project.providers.gradleProperty("org.gradle.vfs.watch").isPresent) {
+                add("org.gradle.vfs.watch=false (file watching is unavailable)")
+            }
+            if (!project.providers.gradleProperty("org.gradle.daemon").isPresent) {
+                add("org.gradle.daemon=false (daemons get killed)")
+            }
+        }
+        if (missing.isEmpty()) return
+        project.logger.lifecycle(
+            "Android / Termux build detected. Consider adding to gradle.properties: " +
+                missing.joinToString(", ") +
+                ". See the Android / Termux section of the README for the rest (d8 from Termux, the game " +
+                "data directory, and why -t does not work)."
+        )
+    }
+
+    /**
      * Warns when the configured game version cannot read `-Dmindustry.data.dir`.
      *
      * A warning rather than a failure: the game falls back to `MINDUSTRY_DATA_DIR` or its own per-OS
      * directory, so the run still works — it just ignores the directory this build chose. Evaluated
      * while `runMindustry` is configured, which is before the download starts.
      */
+
     private fun warnIfDataDirUnsupported(project: Project, version: String) {
+        // On Android the property cannot work at all, whatever the game version: AndroidLauncher overwrites
+        // the data directory with getExternalFilesDir(null), and nothing can pass JVM arguments to the APK.
+        if ((project.extensions.findByType(MindustryModRootExtension::class.java))?.run?.hostPlatform?.get() ==
+            HostPlatform.Android
+        ) {
+            project.logger.warn(
+                "Running on Android: neither MINDUSTRY_DATA_DIR nor -Dmindustry.data.dir reaches the game, " +
+                "because its launcher sets the data directory to /storage/emulated/0/Android/data/<appId>/" +
+                "files itself. Import the built jar in the game (Mods -> Import mod) instead of expecting " +
+                "it in a mods folder this build writes to."
+            )
+            return
+        }
         if (MindustryApi.supportsDataDir(version)) return
         project.logger.warn(
             "Mindustry v${version.trim().removePrefix("v")} cannot read -Dmindustry.data.dir (added in " +

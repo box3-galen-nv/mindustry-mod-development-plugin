@@ -35,6 +35,13 @@ internal object JarAndroidTask {
         val sdkInstallDir: File = File("."),
         val sdkDownloadTimeoutMinutes: Long =
             MindustryDownloadConfig.DEFAULT_ANDROID_SDK_DOWNLOAD_TIMEOUT_MINUTES,
+        /**
+         * A d8 command resolved at configuration time from `build.d8Executable`, the `PATH`, or an
+         * already-installed SDK. Null means "nothing usable yet", which is what makes the task install an
+         * SDK. It is a prefix rather than one path, because the build-tools fallback is
+         * `java -cp lib/d8.jar com.android.tools.r8.D8`.
+         */
+        val d8Command: List<String>? = null,
     )
 
     /**
@@ -72,47 +79,46 @@ internal object JarAndroidTask {
         task.inputs.property("androidSdkDownloadUrl", options.sdkDownloadUrl)
         task.inputs.property("androidSdkDownloadPackages", options.sdkDownloadPackages)
         task.inputs.property("androidSdkExtraArgs", options.sdkExtraArgs)
+        // Part of the command line, so a change to it must re-run d8 rather than report UP-TO-DATE.
+        task.inputs.property("d8Command", options.d8Command ?: emptyList<String>())
 
         task.doLast { _: Task ->
-            val sdkRoot = resolveOrInstallSdk(project, options)
+            // A d8 that already exists — configured, on the PATH, or inside an installed SDK — means this
+            // task must not touch the SDK at all. Only when there is none anywhere does the SDK get
+            // installed, which is what keeps dexing possible on Termux (no SDK, `pkg install d8` instead).
+            val sdkRoot = if (options.d8Command != null) {
+                // Standalone d8: still look for an installed SDK, but only to borrow its android.jar —
+                // never to install one, which is what makes this usable on Termux.
+                AndroidSdk.findAndroidSdkDir(options.androidSdkDir?.orNull?.asFile)
+            } else {
+                resolveOrInstallSdk(project, options)
+            }
+            val d8Command = options.d8Command ?: AndroidSdk.resolveD8(null, null, sdkRoot)
+                ?: throw GradleException(
+                    "No d8 command found. Install one (Termux: 'pkg install d8'), point " +
+                    "build.d8Executable at it, install an Android SDK, or enable " +
+                    "download.androidSdkAutoDownload."
+                )
 
-            // Pick the newest platform / build-tools by VERSION NUMBER, not by
-            //     string sort (string sort wrongly prefers "android-9" over "android-30").
-            val platformRoot = File(sdkRoot, "platforms")
-                .listFiles()
-                ?.filter { File(it, "android.jar").exists() }
-                ?.maxWithOrNull(Comparator(AndroidSdk::compareSdkVersions))
-                ?: throw GradleException("No android.jar found in '$sdkRoot/platforms'")
-            val androidJar = File(platformRoot, "android.jar")
-
-            val buildToolsRoot = File(sdkRoot, "build-tools")
-                .listFiles()
-                ?.filter {
-                    File(it, "d8").exists() || File(it, "d8.bat").exists() || File(it, "d8.jar").exists()
-                }
-                ?.maxWithOrNull(Comparator(AndroidSdk::compareSdkVersions))
-                ?: throw GradleException("No build-tools found in '$sdkRoot/build-tools'")
-
-            // `d8.bat` is what Windows build-tools install (the jar lives under lib/); running that jar
-            // directly, as the old fallback did, only produced a bare IOException.
-            val d8Binary = when {
-                File(buildToolsRoot, "d8").exists() -> File(buildToolsRoot, "d8").absolutePath
-                File(buildToolsRoot, "d8.bat").exists() -> File(buildToolsRoot, "d8.bat").absolutePath
-                else -> throw GradleException(
-                    "No d8 launcher in '$buildToolsRoot': expected 'd8' (macOS/Linux) or 'd8.bat' " +
-                    "(Windows). Reinstall that build-tools package, or point " +
-                    "download.androidSdkDownloadPackages at a complete one."
+            // d8 desugars better with the platform on its classpath, but it is not required: on Termux
+            // there is usually no SDK at all and dexing still works.
+            val androidJar = sdkRoot?.let { AndroidSdk.findAndroidJar(it) }
+            if (androidJar == null) {
+                task.logger.warn(
+                    "No android.jar found, so d8 runs without the Android platform on its classpath and " +
+                    "desugaring may be incomplete. Point build.androidSdkDir at an SDK with a 'platforms' " +
+                    "directory if the dex fails to load in the game."
                 )
             }
 
             val deps = buildSet {
                 addAll(project.configurations.getByName("compileClasspath").files)
                 addAll(project.configurations.getByName("runtimeClasspath").files)
-                add(androidJar)
+                if (androidJar != null) add(androidJar)
             }
 
             val args = AndroidSdk.buildD8Command(
-                d8Binary = d8Binary,
+                d8Command = d8Command,
                 deps = deps,
                 extraArgs = options.d8Args,
                 output = androidOutput,

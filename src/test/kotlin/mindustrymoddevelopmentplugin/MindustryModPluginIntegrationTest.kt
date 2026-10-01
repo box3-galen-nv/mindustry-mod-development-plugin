@@ -1698,8 +1698,10 @@ class MindustryModPluginIntegrationTest {
         rootDir.resolve("sdk").mkdirs()
 
         val result = failResult("jarAndroid")
+        // d8 is resolved before android.jar now (dexing no longer depends on the SDK), so an empty SDK
+        // directory reports the missing d8 first. Either way it fails loudly rather than downloading.
         assertTrue(
-            result.output.contains("No android.jar found"),
+            result.output.contains("No d8 command found") || result.output.contains("No android.jar found"),
             "with auto-download off the empty SDK must fail loudly:\n${result.output}"
         )
         assertTrue(!result.output.contains("downloading the command-line tools"), "no download may happen")
@@ -1778,6 +1780,56 @@ class MindustryModPluginIntegrationTest {
         assertTrue(
             result.output.contains("already has a 'deploy' task"),
             "the conflict must be reported, not guessed at:\n${result.output}",
+        )
+    }
+    /**
+     * Standalone `d8` stub: writes a valid (empty) zip to its `--output` argument.
+     *
+     * Used by the "configured d8, no SDK involvement" test. A real d8 writes a jar there, so the stub has
+     * to produce something `zipTree` can read later.
+     */
+    private fun fakeD8Script(): File =
+        rootDir.resolve("standalone-d8").apply {
+            writeText(
+                """
+                #!/bin/sh
+                out=""
+                while [ ${'$'}# -gt 0 ]; do
+                  case "${'$'}1" in
+                    --output) out="${'$'}2"; shift 2 ;;
+                    *) shift ;;
+                  esac
+                done
+                printf 'PK\005\006' > "${'$'}out"
+                head -c 18 /dev/zero >> "${'$'}out"
+                """.trimIndent() + "\n"
+            )
+            setExecutable(true)
+        }
+
+    @Test
+    fun `jarAndroid dexes with a configured d8 and never installs an sdk`() {
+        // This is the Termux shape: `pkg install d8` gives a d8, and no Android SDK is involved at all.
+        // An SDK that happens to exist on the machine may still supply android.jar, which only helps.
+        val d8 = fakeD8Script()
+        write("settings.gradle.kts", """rootProject.name = "test"""")
+        write("build.gradle.kts", androidBuildScript(
+            extraBuild = """androidSdkDir = file("no-such-sdk")
+                d8Executable = file("${d8.name}")""",
+        ))
+        write("src/test-mod/Mod.java", "package testmod;\npublic class Mod {}\n")
+
+        val result = runner().withArguments("jarAndroid").build()
+
+        assertTrue(result.task(":jarAndroid")?.outcome == TaskOutcome.SUCCESS, result.output)
+        assertTrue(
+            !result.output.contains("Downloading") && !rootDir.resolve("sdkmanager-calls.txt").exists(),
+            "a configured d8 must not trigger an SDK install:\n${result.output}",
+        )
+        val androidJar = rootDir.resolve("build/libs").listFiles()?.firstOrNull { it.name.endsWith("-Android.jar") }
+        assertTrue(
+            androidJar != null && androidJar.length() > 0,
+            "the dex jar must exist:\n${result.output}",
         )
     }
 }

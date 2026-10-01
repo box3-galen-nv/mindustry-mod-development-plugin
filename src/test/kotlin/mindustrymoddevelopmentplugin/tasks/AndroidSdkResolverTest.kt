@@ -228,4 +228,90 @@ class AndroidSdkResolverTest {
         assertTrue(AndroidSdk.findAndroidSdkDir(null, mapOf("ANDROID_HOME" to envHome.path), userHome) == envHome)
         assertTrue(AndroidSdk.findAndroidSdkDir(null, mapOf("ANDROID_SDK_ROOT" to rootHome.path), userHome) == rootHome)
     }
+
+    // =========================================================================
+    //  resolveD8: dexing without an Android SDK
+    // =========================================================================
+
+    private fun executable(dir: File, name: String): File =
+        File(dir, name).also {
+            it.parentFile.mkdirs()
+            it.writeText("#!/bin/sh\n")
+            it.setExecutable(true)
+        }
+
+    @Test
+    fun `a configured d8 executable wins over the path and the sdk`() {
+        val configured = executable(sdkDir("tools"), "my-d8")
+        val onPath = sdkDir("path-bin").also { executable(it, "d8") }
+        val sdk = sdkDir("sdk").also { executable(File(it, "build-tools/34.0.0"), "d8") }
+
+        assertTrue(
+            AndroidSdk.resolveD8(configured, onPath.path, sdk, "Linux") == listOf(configured.absolutePath)
+        )
+    }
+
+    @Test
+    fun `a configured d8 jar is run through the build JVM`() {
+        val jar = File(sdkDir("tools"), "d8.jar").also { it.writeText("x") }
+
+        val command = AndroidSdk.resolveD8(jar, null, null, "Linux")!!
+
+        assertTrue(command[1] == "-cp" && command[2] == jar.absolutePath, "got $command")
+        assertTrue(command[3] == "com.android.tools.r8.D8", "got $command")
+        assertTrue(command[0].endsWith("java") || command[0].endsWith("java.exe"), "got $command")
+    }
+
+    @Test
+    fun `d8 on the path is used when nothing is configured`() {
+        val bin = sdkDir("path-bin")
+        val d8 = executable(bin, "d8")
+
+        assertTrue(AndroidSdk.resolveD8(null, bin.path, null, "Linux") == listOf(d8.absolutePath))
+    }
+
+    @Test
+    fun `build-tools are the last resort, and a lone lib jar becomes a java command`() {
+        val sdk = sdkDir("sdk")
+        val tools = File(sdk, "build-tools/34.0.0").also { it.mkdirs() }
+
+        // Windows layout first: d8.bat with no d8.
+        File(tools, "d8.bat").writeText("rem d8")
+        assertTrue(AndroidSdk.resolveD8(null, null, sdk, "Windows") == listOf(File(tools, "d8.bat").absolutePath))
+
+        // The launcher is missing entirely. This used to fail outright — and it is exactly the Termux case,
+        // where build-tools' d8 script cannot run because Android has no /bin/sh, while its jar always can.
+        File(tools, "d8.bat").delete()
+        val jar = File(tools, "lib/d8.jar").also { it.parentFile.mkdirs(); it.writeText("x") }
+        val command = AndroidSdk.resolveD8(null, null, sdk, "Linux")!!
+        assertTrue(command[1] == "-cp" && command[2] == jar.absolutePath, "got $command")
+        assertTrue(command[3] == "com.android.tools.r8.D8", "got $command")
+
+        // A real launcher beats the jar.
+        executable(tools, "d8")
+        assertTrue(AndroidSdk.resolveD8(null, null, sdk, "Linux") == listOf(File(tools, "d8").absolutePath))
+    }
+
+    @Test
+    fun `the newest build-tools wins`() {
+        val sdk = sdkDir("sdk")
+        executable(File(sdk, "build-tools/34.0.0"), "d8")
+        val newer = executable(File(sdk, "build-tools/35.0.0"), "d8")
+
+        assertTrue(AndroidSdk.resolveD8(null, null, sdk, "Linux") == listOf(newer.absolutePath))
+    }
+
+    @Test
+    fun `no d8 anywhere yields null and android jar is optional`() {
+        assertTrue(AndroidSdk.resolveD8(null, "", sdkDir("empty-sdk"), "Linux") == null)
+        assertTrue(AndroidSdk.findAndroidJar(sdkDir("no-platforms")) == null)
+
+        val sdk = sdkDir("sdk-with-platform")
+        File(sdk, "platforms/android-30").mkdirs()
+        File(sdk, "platforms/android-30/android.jar").writeText("x")
+        File(sdk, "platforms/android-34").mkdirs()
+        val newest = File(sdk, "platforms/android-34/android.jar").also { it.writeText("x") }
+
+        assertTrue(AndroidSdk.findAndroidJar(sdk) == newest, "the newest platform wins")
+    }
 }

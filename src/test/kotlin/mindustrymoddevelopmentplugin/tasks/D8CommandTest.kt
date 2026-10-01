@@ -25,7 +25,7 @@ class D8CommandTest {
         val output = file("out.jar")
         val input = file("in.jar")
         val args = AndroidSdk.buildD8Command(
-            d8Binary = "/sdk/build-tools/d8",
+            d8Command = listOf("/sdk/build-tools/d8"),
             deps = listOf(dep),
             output = output,
             input = input,
@@ -42,7 +42,7 @@ class D8CommandTest {
         val output = file("out.jar")
         val input = file("in.jar")
         val args = AndroidSdk.buildD8Command(
-            d8Binary = "d8",
+            d8Command = listOf("d8"),
             deps = emptyList(),
             extraArgs = listOf("--no-desugaring", "--release"),
             output = output,
@@ -58,7 +58,7 @@ class D8CommandTest {
         val output = file("out.jar")
         val input = file("in.jar")
         val args = AndroidSdk.buildD8Command(
-            d8Binary = "d8",
+            d8Command = listOf("d8"),
             deps = emptyList(),
             extraArgs = listOf("--min-api", "21"),
             output = output,
@@ -74,7 +74,7 @@ class D8CommandTest {
         val output = file("out.jar")
         val input = file("in.jar")
         val args = AndroidSdk.buildD8Command(
-            d8Binary = "d8",
+            d8Command = listOf("d8"),
             deps = emptyList(),
             minApi = 26,
             output = output,

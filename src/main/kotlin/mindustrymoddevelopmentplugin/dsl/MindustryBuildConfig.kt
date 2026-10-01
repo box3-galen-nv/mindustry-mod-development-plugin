@@ -1,6 +1,7 @@
 package mindustrymoddevelopmentplugin.dsl
 
 import org.gradle.api.file.DirectoryProperty
+import org.gradle.api.file.RegularFileProperty
 import org.gradle.api.provider.ListProperty
 import org.gradle.api.provider.Property
 
@@ -51,10 +52,19 @@ abstract class MindustryBuildConfig {
     abstract val androidSdkDir: DirectoryProperty
 
     /**
+     * An explicit `d8` command to dex with, so no Android SDK is needed at all.
+     *
+     * Point it at `d8` (Termux's `pkg install d8` installs one) or at a `d8.jar`, which is then run
+     * through the build's own JVM. When unset, `d8` on the `PATH` and then the SDK's build-tools are tried.
+     */
+    abstract val d8Executable: RegularFileProperty
+
+    /**
      * Extra arguments passed to d8 (a list of strings), e.g. `"--no-desugaring"`, `"--release"`.
      * Inserted after the default arguments (`--min-api 14` etc.) and can override them.
      * Default [DEFAULT_D8_ARGS] (empty).
      */
+
     abstract val d8Args: ListProperty<String>
 
     /**
