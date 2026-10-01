@@ -62,9 +62,6 @@ abstract class MindustryDebugConfig {
     }
 
     companion object {
-        // Every default is a named constant referenced by init { }, so the block above never
-        // mixes inline literals with named defaults.
-
         /** Default value of [maxLogFiles]. */
         const val DEFAULT_MAX_LOG_FILES = 25
 

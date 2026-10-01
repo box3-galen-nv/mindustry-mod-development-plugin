@@ -117,8 +117,6 @@ abstract class MindustryDownloadConfig {
     }
 
     companion object {
-        // Every default is a named constant referenced by init { }, so the block above never
-        // mixes inline literals with named defaults.
 
         /** Default value of [mindustryDownloadVersion]. */
         // v147 is the first release that understands -Dmindustry.data.dir, so the default works with

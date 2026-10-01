@@ -52,6 +52,9 @@ tasks/                  one internal object per task: <Name>Task.configure(...);
 - **Packages say what a type is for**: `dsl/` is extensions and configs only, `game/` is knowledge about
   the game, `platform/` is where things run, `meta/` is the engine's metadata and the mod's own naming,
   `tasks/` is task wiring. The root package holds the plugin entry point and nothing else.
+- **Defaults are named constants referenced from `init { }`**, never inline literals, so a KDoc can link
+  to the constant and generated text can reuse it. This rule is the one place that is written down: do not
+  repeat it as a comment inside every config class.
 - **One top-level declaration per file.** Detection or factory logic belongs in that type's `companion
   object` (`HostPlatform.detect`), never in a second top-level object, so no file declares two of them.
 - One object per task file, named after the file, with `configure(...)` doing the wiring; option holders

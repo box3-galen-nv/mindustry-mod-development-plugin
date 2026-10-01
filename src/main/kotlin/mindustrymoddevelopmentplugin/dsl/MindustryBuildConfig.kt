@@ -97,8 +97,6 @@ abstract class MindustryBuildConfig {
     }
 
     companion object {
-        // Every default is a named constant referenced by init { }, so the block above never
-        // mixes inline literals with named defaults.
 
         /** Default value of [useHJson]. */
         val DEFAULT_USE_HJSON = false
