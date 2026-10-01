@@ -79,6 +79,12 @@ tasks/                  one internal object per task: <Name>Task.configure(...);
   reason IDEA resolves breakpoints), and it pulls a consumer who declared an older KGP up onto the patched
   version. Do not downgrade it, and do not drop it for `compileOnly`: the typed extension lookup then fails
   on a consumer whose KGP lives in another classloader.
+- **No test may reach the network or launch the real game.** A fixture that executes `runMindustry` must put
+  a junk jar at the *resolved* path and pin an unreachable `mindustryDownloadUrl` (`file:///nonexistent/...`),
+  so a mismatched path fails locally instead of downloading the game and starting it. That happened once: a
+  default version change stopped matching a fixture's file name, the task fetched the real 73 MB game, the
+  run launched it, and the suite stayed green because it only asserts task outcomes. Two tests now also
+  assert that their output never mentions the release URL.
 - **Two deliberate tradeoffs, both documented in the README**: `jarAndroid` fingerprints the SDK by path
   only (hashing a whole SDK costs more than re-running d8), and `build/buildCounter.txt` is read while the
   artifact name is resolved, so it is not a declared task input — the name changes anyway.

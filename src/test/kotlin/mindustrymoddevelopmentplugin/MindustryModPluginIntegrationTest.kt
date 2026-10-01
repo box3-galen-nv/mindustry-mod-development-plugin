@@ -24,6 +24,19 @@ class MindustryModPluginIntegrationTest {
     //  game data dir (run.gameDataDir)
     // =========================================================================
 
+    /**
+     * The `download { }` body for a test that must never, ever reach the network.
+     *
+     * A junk jar at the resolved path keeps `downloadMindustry` from fetching anything, and the `file://`
+     * URL is the safety net: if the path ever stops matching (a default version change, say), the task
+     * fails locally instead of downloading the real game and launching it during the suite. That is not
+     * hypothetical — it happened once.
+     */
+    private fun offlineGameJar(version: String = "147") = """
+        mindustryDownloadVersion = "$version"
+        mindustryDownloadUrl = "file:///nonexistent/mindustry-releases"
+    """.trimIndent()
+
     /** Root-project mod fixture; [rootRun] is the `run { }` body, which is where `gameDataDir` is set. */
     private fun writeDataDirProject(
         version: String,
@@ -34,7 +47,13 @@ class MindustryModPluginIntegrationTest {
             ${pluginSnippet()}
             mindustryModRoot {
                 mindustryApiVersion = "159"
-                download { mindustryDownloadVersion = "$version" }
+                download {
+                    mindustryDownloadVersion = "$version"
+                    // No test may reach the network: see offlineGameJar.
+                    mindustryDownloadUrl = "file:///nonexistent/mindustry-releases"
+                    // No test may reach the network: see offlineGameJar.
+                    mindustryDownloadUrl = "file:///nonexistent/mindustry-releases"
+                }
                 run {
                     $rootRun
                 }
@@ -117,7 +136,13 @@ class MindustryModPluginIntegrationTest {
             ${pluginSnippet()}
             mindustryModRoot {
                 mindustryApiVersion = "159"
-                download { mindustryDownloadVersion = "147" }
+                download {
+                    mindustryDownloadVersion = "147"
+                    // No test may reach the network: see offlineGameJar.
+                    mindustryDownloadUrl = "file:///nonexistent/mindustry-releases"
+                    // No test may reach the network: see offlineGameJar.
+                    mindustryDownloadUrl = "file:///nonexistent/mindustry-releases"
+                }
                 run { gameDataDir = file("data") }
             }
         """)
@@ -196,7 +221,10 @@ class MindustryModPluginIntegrationTest {
                 // Pinned: the default format carries {build_count}, so two separate Gradle invocations
                 // (deploy, then runMindustry) would look for differently named artifacts.
                 build { format = "{name}-{version}" }
-                download { mindustryDownloadVersion = "146" }
+                download {
+                    mindustryDownloadVersion = "146"
+                    mindustryDownloadUrl = "file:///nonexistent/mindustry-releases"
+                }
                 run { gameDataDir = file("data") }
                 debug { enableRunLogging = false }
             }
@@ -209,7 +237,11 @@ class MindustryModPluginIntegrationTest {
         val packaged = runner().withArguments("deploy").build()
         assertTrue(packaged.task(":deploy")?.outcome == TaskOutcome.SUCCESS, packaged.output)
 
-        failResult("runMindustry")
+        val run = failResult("runMindustry")
+        assertTrue(
+            !run.output.contains("github.com"),
+            "the suite must never fetch the real game:\n${run.output}",
+        )
 
         val deployed = rootDir.resolve("data/mods").listFiles()?.map { it.name }.orEmpty()
         assertTrue(
@@ -232,6 +264,10 @@ class MindustryModPluginIntegrationTest {
         assertTrue(
             result.output.contains("does not look like a jar"),
             "the existing file must be reported, not replaced:\n${result.output}",
+        )
+        assertTrue(
+            !result.output.contains("github.com"),
+            "the suite must never fetch the real game:\n${result.output}",
         )
         assertTrue(
             rootDir.resolve("build/game/Mindustry-146.jar").readText() == "not a real jar",
