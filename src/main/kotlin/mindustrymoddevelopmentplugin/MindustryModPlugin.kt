@@ -1,5 +1,9 @@
 package mindustrymoddevelopmentplugin
 
+import mindustrymoddevelopmentplugin.game.MindustryApi
+import mindustrymoddevelopmentplugin.game.GameDataDir
+import mindustrymoddevelopmentplugin.platform.HostPlatform
+import mindustrymoddevelopmentplugin.meta.ArtifactNaming
 import mindustrymoddevelopmentplugin.dsl.MindustryBuildConfig
 import mindustrymoddevelopmentplugin.dsl.MindustryDownloadConfig
 import mindustrymoddevelopmentplugin.dsl.MindustryModExtension

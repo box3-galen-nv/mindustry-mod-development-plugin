@@ -1,5 +1,6 @@
 package mindustrymoddevelopmentplugin.tasks
 
+import mindustrymoddevelopmentplugin.meta.ArtifactNaming
 import mindustrymoddevelopmentplugin.dsl.MindustryModExtension
 import mindustrymoddevelopmentplugin.meta.ModFileReader
 import org.gradle.api.GradleException

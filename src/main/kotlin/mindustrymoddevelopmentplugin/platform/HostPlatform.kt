@@ -1,4 +1,4 @@
-package mindustrymoddevelopmentplugin
+package mindustrymoddevelopmentplugin.platform
 
 /**
  * Where the build, and therefore the game it deploys to, is expected to run.

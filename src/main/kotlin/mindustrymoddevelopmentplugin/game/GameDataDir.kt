@@ -1,5 +1,6 @@
-package mindustrymoddevelopmentplugin
+package mindustrymoddevelopmentplugin.game
 
+import mindustrymoddevelopmentplugin.platform.HostPlatform
 import java.io.File
 import org.gradle.api.GradleException
 

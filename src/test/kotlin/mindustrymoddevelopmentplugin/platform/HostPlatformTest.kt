@@ -1,4 +1,4 @@
-package mindustrymoddevelopmentplugin
+package mindustrymoddevelopmentplugin.platform
 
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test

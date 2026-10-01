@@ -1,4 +1,4 @@
-package mindustrymoddevelopmentplugin
+package mindustrymoddevelopmentplugin.meta
 
 import mindustrymoddevelopmentplugin.dsl.MindustryModExtension
 import mindustrymoddevelopmentplugin.dsl.MindustryModRootExtension

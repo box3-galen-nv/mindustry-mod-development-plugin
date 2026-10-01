@@ -1,4 +1,4 @@
-package mindustrymoddevelopmentplugin
+package mindustrymoddevelopmentplugin.game
 
 import org.gradle.api.GradleException
 import org.gradle.api.Project

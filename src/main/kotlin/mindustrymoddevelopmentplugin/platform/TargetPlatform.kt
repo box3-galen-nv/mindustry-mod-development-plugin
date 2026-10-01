@@ -1,4 +1,4 @@
-package mindustrymoddevelopmentplugin
+package mindustrymoddevelopmentplugin.platform
 
 /**
  * Packaging target platform.

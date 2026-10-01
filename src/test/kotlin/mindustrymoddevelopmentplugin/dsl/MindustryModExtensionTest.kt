@@ -1,6 +1,6 @@
 package mindustrymoddevelopmentplugin.dsl
 
-import mindustrymoddevelopmentplugin.TargetPlatform
+import mindustrymoddevelopmentplugin.platform.TargetPlatform
 import java.io.File
 import mindustrymoddevelopmentplugin.meta.ModMeta
 import org.gradle.testfixtures.ProjectBuilder

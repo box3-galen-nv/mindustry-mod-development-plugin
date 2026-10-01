@@ -1,5 +1,6 @@
 package mindustrymoddevelopmentplugin
 
+import mindustrymoddevelopmentplugin.game.MindustryApi
 import mindustrymoddevelopmentplugin.dsl.MindustryRunConfig
 import java.io.File
 import java.nio.file.Path
