@@ -611,14 +611,6 @@ class MindustryModPlugin @Inject constructor(
     }
 
     /**
-     * Warns when the configured game version cannot read `-Dmindustry.data.dir`.
-     *
-     * A warning rather than a failure: the game falls back to `MINDUSTRY_DATA_DIR` or its own per-OS
-     * directory, so the run still works — it just ignores the directory this build chose. Evaluated
-     * while `runMindustry` is configured, which is before the download starts.
-     */
-
-    /**
      * The headless server is the runtime the mod is loaded into, so its version has to match the API the mod
      * was compiled against. Mismatches surface as `NoClassDefFoundError` deep inside the game otherwise.
      */
@@ -636,6 +628,14 @@ class MindustryModPlugin @Inject constructor(
             "NoClassDefFoundError. Set download.mindustryDownloadVersion to the same release."
         )
     }
+
+    /**
+     * Warns when the configured game version cannot read `-Dmindustry.data.dir`.
+     *
+     * A warning rather than a failure: the game falls back to `MINDUSTRY_DATA_DIR` or its own per-OS
+     * directory, so the run still works — it just ignores the directory this build chose. Evaluated
+     * while `runMindustry` is configured, which is before the download starts.
+     */
 
     private fun warnIfDataDirUnsupported(project: Project, version: String) {
         // On Android the property cannot work at all, whatever the game version: AndroidLauncher overwrites

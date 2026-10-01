@@ -34,6 +34,22 @@ internal object RunMindustryTask {
     )
 
     /**
+     * Runs the game's headless server instead of the desktop client.
+     *
+     * `server-release.jar` is self-contained, sets its data directory to `<workingDir>/config`, and is an
+     * ordinary JVM — which is why this is the only Android path where JDWP (and therefore `jdb` or a DAP
+     * client) works at all.
+     */
+    class HeadlessOptions(
+        /** The server jar, downloaded by [downloadTaskName]. */
+        val jar: File,
+        /** Working directory; the server's data directory is `<workingDir>/config`. */
+        val workingDir: File,
+        /** The task that provides [jar]. */
+        val downloadTaskName: String = "downloadHeadlessServer",
+    )
+
+    /**
      * Wires `runMindustry`.
      *
      * Packaging is not a dependency of this task. `gradle <packaging> runMindustry` builds first because
@@ -55,21 +71,6 @@ internal object RunMindustryTask {
      *   rather than against the project the plugin configured. The directory is created when missing,
      *   and an existing *file* at that path fails the run.
      */
-    /**
-     * Runs the game's headless server instead of the desktop client.
-     *
-     * `server-release.jar` is self-contained, sets its data directory to `<workingDir>/config`, and is an
-     * ordinary JVM — which is why this is the only Android path where JDWP (and therefore `jdb` or a DAP
-     * client) works at all.
-     */
-    class HeadlessOptions(
-        /** The server jar, downloaded by [downloadTaskName]. */
-        val jar: File,
-        /** Working directory; the server's data directory is `<workingDir>/config`. */
-        val workingDir: File,
-        /** The task that provides [jar]. */
-        val downloadTaskName: String = "downloadHeadlessServer",
-    )
 
     fun configure(
         task: JavaExec,

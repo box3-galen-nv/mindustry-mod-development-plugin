@@ -87,12 +87,6 @@ abstract class MindustryRunConfig {
      * and is shared by every project using this plugin. When `androidSdkDir` *is* set, the SDK
      * is installed there instead — an empty configured directory is the common case.
      */
-    /**
-     * Run `server-release.jar` instead of the desktop client.
-     *
-     * The server is a plain JVM process: it is the only way to debug on Android, and it works on a desktop
-     * too (a dedicated server for testing a mod without the GUI).
-     */
     abstract val useHeadlessServer: Property<Boolean>
 
     /** Working directory of the headless server; its data directory is `<workingDir>/config`. */
@@ -106,6 +100,13 @@ abstract class MindustryRunConfig {
 
     /** After staging, also ask Android to launch the game (`am start`). Off by default. */
     abstract val androidLaunchApk: Property<Boolean>
+
+    /**
+     * Run `server-release.jar` instead of the desktop client.
+     *
+     * The server is a plain JVM process: it is the only way to debug on Android, and it works on a desktop
+     * too (a dedicated server for testing a mod without the GUI).
+     */
 
     abstract val androidSdkInstallDir: DirectoryProperty
 
