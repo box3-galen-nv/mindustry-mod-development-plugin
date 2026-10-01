@@ -1,3 +1,4 @@
+import org.gradle.plugin.compatibility.compatibility
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 
 plugins {
@@ -62,6 +63,16 @@ gradlePlugin {
             description = "Builds Mindustry mods: metadata generation, jar and Android DEX packaging, " +
                 "deployment into the game's data directory, and launching the game."
             tags = listOf("mindustry", "mod", "game", "android", "dex")
+
+            // The Portal requires plugins to declare which opt-in Gradle features they support, and saying
+            // "not supported" is explicitly encouraged over staying silent. This is honest: the log-stream
+            // listener registers a plain provider as a task-completion listener, which Gradle's
+            // configuration cache rejects. Flip it to true once that listener is a BuildService.
+            compatibility {
+                features {
+                    configurationCache = false
+                }
+            }
         }
     }
 }
