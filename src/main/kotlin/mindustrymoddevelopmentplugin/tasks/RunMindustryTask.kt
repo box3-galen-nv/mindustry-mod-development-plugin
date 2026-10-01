@@ -159,13 +159,20 @@ internal object RunMindustryTask {
                 //     is a syscall (a 10 MB benchmark is ~25x slower without the buffer).
                 val fos = BufferedOutputStream(FileOutputStream(logFile))
 
-                // Delete old logs, keeping only the newest maxLogFiles entries.
+                // Delete old logs, keeping only the newest maxLogFiles entries. A value below one would
+                //     make drop() throw, and zero would delete the log this run is writing, so clamp it.
+                if (maxLogFiles < 1) {
+                    project.logger.warn(
+                        "debug.maxLogFiles is $maxLogFiles; keeping one log file instead."
+                    )
+                }
+                val keepLogs = maxLogFiles.coerceAtLeast(1)
                 val logs = logDir.listFiles()
                     ?.filter { it.name.startsWith("log_") }
                     ?.sortedDescending()
                     .orEmpty()
-                if (logs.size > maxLogFiles) {
-                    logs.drop(maxLogFiles).forEach { it.delete() }
+                if (logs.size > keepLogs) {
+                    logs.drop(keepLogs).forEach { it.delete() }
                 }
 
                 task.standardOutput = RunLogging.teeStream(System.out, fos)
@@ -202,5 +209,16 @@ internal object RunMindustryTask {
      * acceptable for a warning.
      */
     private fun isPortInUse(port: Int): Boolean =
-        runCatching { java.net.ServerSocket(port).close() }.isFailure
+        try {
+            java.net.ServerSocket(port).close()
+            false
+        } catch (e: java.net.BindException) {
+            true
+        } catch (e: IllegalArgumentException) {
+            // Not "in use" but "not a port": saying the port is taken sent people hunting for a
+            // process that does not exist.
+            throw GradleException("run.debugPort must be a port number between 1 and 65535 (got $port).", e)
+        } catch (e: java.io.IOException) {
+            throw GradleException("Cannot check whether debug port $port is free: ${e.message}", e)
+        }
 }

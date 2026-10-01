@@ -113,7 +113,7 @@ project/
 |----------|------|---------|----|
 | `mindustryApiVersion` | `String` | *(未设置)* | 编译所用的 Mindustry 版本 —— 可选，不设就不加任何 API 依赖：`"159"`、`"v159"`、`"latest"`、`"be"`（≥ v97） |
 | `build.useHJson` | `Boolean` | `false` | 生成元数据的格式（默认 `mod.json`） |
-| `download.mindustryDownloadVersion` | `String` | `"146"` | 要下载的游戏版本；可用 `"latest"`，`"be"` 只是编译期 API 通道、没有发布资产 |
+| `download.mindustryDownloadVersion` | `String` | `"147"` | 要下载的游戏版本；可用 `"latest"`，`"be"` 只是编译期 API 通道、没有发布资产 |
 | `download.mindustryDownloadUrl` | `String` | GitHub Releases | 下载基础 URL |
 | `download.mindustryGamePath` | `RegularFile` | `<root>/build/game/Mindustry-<version>.jar` | 游戏 jar 路径；以 `.jar` 结尾按文件用，否则按目录用 |
 | `download.mindustryDownloadFileName` | `String` | `"Mindustry-{version}"` | 下载文件名模板 |
@@ -154,7 +154,7 @@ project/
 
 数据目录决定游戏把 `settings.bin`、`saves/`、`maps/`、`schematics/`、`screenshots/` 放在哪里 —— 也决定插件把模组部署到哪里，因为 Mindustry 只在 `<数据目录>/mods` 里找模组（目录不存在时会自动创建）。你不配置时，插件按游戏自己的规则解析同一个目录：设置了 `MINDUSTRY_DATA_DIR` 就用它，否则用系统位置（`~/Library/Application Support/Mindustry`、`%AppData%/Mindustry`、`~/.local/share/Mindustry`）。**`mindustryModsDir` 已删除**：mods 目录永远跟随数据目录。
 
-设置 `run.gameDataDir` 会让插件向游戏 JVM 传 `-Dmindustry.data.dir=<绝对路径>`。想要"项目内数据目录"（存档放在构建目录旁边、且 `clean` 不会删），写 `run { gameDataDir = layout.projectDirectory.dir("data") }`；多项目构建要在**每个项目**里都设置（例如放在 `allprojects { }`），它们才会共用同一个目录。该属性从 Mindustry **v147** 才有；旧版本上插件只**告警**，运行时回退到环境变量或游戏自己的目录。`download.mindustryDownloadVersion` 默认仍是 `"146"`，所以项目内数据目录建议配 v147+（或 `"latest"`）。
+设置 `run.gameDataDir` 会让插件向游戏 JVM 传 `-Dmindustry.data.dir=<绝对路径>`。想要"项目内数据目录"（存档放在构建目录旁边、且 `clean` 不会删），写 `run { gameDataDir = layout.projectDirectory.dir("data") }`；多项目构建要在**每个项目**里都设置（例如放在 `allprojects { }`），它们才会共用同一个目录。该属性从 Mindustry **v147** 才有；旧版本上插件只**告警**，运行时回退到环境变量或游戏自己的目录。`download.mindustryDownloadVersion` 默认是 `"147"`，即第一个能读该属性的版本。
 
 注意：`data/` 在 `build/` 之外，`./gradlew clean` 不会删它 —— 建议自己加进 `.gitignore`。你指定的目录是**全新空目录**：原存档与设置留在原处，插件不复制。两个实例共用一个数据目录会争 `settings.bin` 与 `saves/`，请各给一个 `gameDataDir`。项目根下的该目录会被排除出 mod 源码扫描，里面的 `.kt`/`.java` 不会被编译进 jar。该属性由 `ClientLauncher` 读取，所以专用无头服务端不认它（本插件也不会启动服务端），Android/iOS 同样不受影响。
 

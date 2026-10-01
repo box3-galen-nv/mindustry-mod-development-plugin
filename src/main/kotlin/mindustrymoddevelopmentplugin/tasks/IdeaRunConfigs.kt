@@ -38,11 +38,21 @@ internal object IdeaRunConfigs {
         taskName: String,
         debugPort: Int,
         packagingTask: String = "deploy",
+        warn: (String) -> Unit = {},
     ): List<File> {
         val (gradleConfig, remoteConfig) = files(project)
         gradleConfig.parentFile.mkdirs()
-        gradleConfig.writeText(gradleConfiguration(taskName, debugPort, packagingTask))
-        remoteConfig.writeText(remoteConfiguration(debugPort))
+        // IDEA writes its own edits back into these files, so overwriting one silently would throw away
+        // whatever the user configured there (a JDK, an environment variable). Say so instead.
+        listOf(
+            gradleConfig to gradleConfiguration(taskName, debugPort, packagingTask),
+            remoteConfig to remoteConfiguration(debugPort),
+        ).forEach { (file, content) ->
+            if (file.isFile && file.readText() != content) {
+                warn("Overwriting '${file.name}', which differs from what this task generates.")
+            }
+            file.writeText(content)
+        }
         return listOf(gradleConfig, remoteConfig)
     }
 

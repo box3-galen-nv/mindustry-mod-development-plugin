@@ -79,6 +79,9 @@ tasks/                  one internal object per task: <Name>Task.configure(...);
   reason IDEA resolves breakpoints), and it pulls a consumer who declared an older KGP up onto the patched
   version. Do not downgrade it, and do not drop it for `compileOnly`: the typed extension lookup then fails
   on a consumer whose KGP lives in another classloader.
+- **Two deliberate tradeoffs, both documented in the README**: `jarAndroid` fingerprints the SDK by path
+  only (hashing a whole SDK costs more than re-running d8), and `build/buildCounter.txt` is read while the
+  artifact name is resolved, so it is not a declared task input — the name changes anyway.
 - **d8**: drain its merged output *while* it runs (a full pipe buffer deadlocks `waitFor`), include the
   captured output in failure messages, and delete a half-written output jar.
 - **SDK installs never modify an SDK they did not create**, and the post-install check only reports

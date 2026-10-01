@@ -61,6 +61,13 @@ class MindustryModPlugin @Inject constructor(
 
         registerExtensions(project)
 
+        // `java` is applied here rather than in afterEvaluate so that `java { }`, `sourceSets { }` and the
+        // `implementation` accessor all exist while the build script is still being evaluated. Whether a
+        // project is a mod is not known yet, and applying `java` to a non-mod project is harmless.
+        if (!project.plugins.hasPlugin("java")) {
+            project.pluginManager.apply("java")
+        }
+
         project.afterEvaluate { configureModuleIfMod(project) }
 
         configureRoot(project)
@@ -107,6 +114,25 @@ class MindustryModPlugin @Inject constructor(
         val download = ext.download
         val run = ext.run
         val debug = ext.debug
+
+        // The KDoc promises a default, and a convention is where Gradle expects one: the value depends on
+        // the Gradle user home, which the DSL object itself cannot see.
+        run.androidSdkInstallDir.convention(
+            project.layout.dir(
+                project.provider { File(project.gradle.gradleUserHomeDir, "$PLUGIN_DIR_NAME/android-sdk") },
+            ),
+        )
+
+        // A relative MINDUSTRY_DATA_DIR is resolved against this *Gradle* process's working directory,
+        // while the game resolves it against its own — so the plugin and the game can disagree.
+        val envDataDir = System.getenv(GameDataDir.ENV_VAR)?.trim().orEmpty()
+        if (envDataDir.isNotEmpty() && !File(envDataDir).isAbsolute) {
+            logger.warn(
+                "${GameDataDir.ENV_VAR} is set to the relative path '$envDataDir'. The game resolves it " +
+                "against its own working directory, so set an absolute path or run.gameDataDir to be sure " +
+                "both use the same directory."
+            )
+        }
 
         // Lazy on purpose: `resolveDownloadFileName` validates the template, and validating during
         // configuration would reject a value the build script has not assigned yet.
@@ -164,6 +190,8 @@ class MindustryModPlugin @Inject constructor(
         val modsDir = project.providers.provider { File(chosenDataDir.orNull ?: implicitDataDir.get(), "mods") }
 
         project.tasks.register("clearMods") { task ->
+            task.group = MINDUSTRY_GROUP
+            task.description = "Removes the mod jars this plugin deployed earlier from the mods folder."
             ClearModsTask.configure(
                 task, modProjects.get(), run.cleanDeployedFiles.get(),
                 run.deployTag.get(), modsDir.get(), project,
@@ -171,6 +199,8 @@ class MindustryModPlugin @Inject constructor(
         }
 
         project.tasks.register("runMindustry", JavaExec::class.java) { task ->
+            task.group = MINDUSTRY_GROUP
+            task.description = "Deploys the built mods and launches the game."
             val resolvedDataDir = chosenDataDir.orNull
             if (resolvedDataDir != null) {
                 warnIfDataDirUnsupported(project, download.mindustryDownloadVersion.get())
@@ -235,10 +265,13 @@ class MindustryModPlugin @Inject constructor(
         // -- Names ---------------------------------------------------------------
         val build = rootExt?.build
         val author = ArtifactNaming.resolveMetaValue(ext.modMeta.author, project.projectDir, "author")
-        if (author.isBlank()) {
+        // Only worth warning about when the format asks for it: the default one does not, and warning on
+        // every Java-only mod about an unused tag is pure noise.
+        val authorFormat = build?.format?.get() ?: MindustryBuildConfig.DEFAULT_FORMAT
+        if (author.isBlank() && authorFormat.contains("{author}")) {
             project.logger.warn(
-                "Mod '${project.name}': modMeta.author is not set. " +
-                "The {author} tag in the jar name will be replaced with an empty string."
+                "Mod '${project.name}': modMeta.author is not set while build.format contains {author}, so " +
+                "that part of the artifact name stays empty."
             )
         }
         val names = ArtifactNaming.names(project, ext, rootExt)
@@ -250,6 +283,8 @@ class MindustryModPlugin @Inject constructor(
 
         // -- Tasks ---------------------------------------------------------------
         project.tasks.register("buildModHJson") { task ->
+            task.group = MINDUSTRY_GROUP
+            task.description = "Writes mod.json / mod.hjson from the modMeta { } block."
             BuildModHJsonTask.configure(task, ext, generateMeta, useHJson, project, modFileName)
         }
 
@@ -258,6 +293,8 @@ class MindustryModPlugin @Inject constructor(
         }
 
         project.tasks.register("jarAndroid") { task ->
+            task.group = MINDUSTRY_GROUP
+            task.description = "Builds the Android DEX jar with d8."
             JarAndroidTask.configure(task, libsDir, names.jar, names.android, project, jarAndroidOptions(project, rootExt))
         }
 
@@ -271,6 +308,8 @@ class MindustryModPlugin @Inject constructor(
             return@configureModule
         }
         project.tasks.register("deploy", Jar::class.java) { task ->
+            task.group = MINDUSTRY_GROUP
+            task.description = "Merges the desktop and Android jars into the one the game loads."
             DeployTask.configure(
                 task, libsDir, names.jar, names.android, names.deploy, project,
                 // Auto-download means jarAndroid will provide an SDK itself; otherwise one has to be found.
@@ -311,10 +350,8 @@ class MindustryModPlugin @Inject constructor(
                 )
             }
         }
-        // `java-library` / `application` also bring `java`, so hasPlugin("java") covers them.
-        if (kotlin == null && !project.plugins.hasPlugin("java")) {
-            project.pluginManager.apply("java")
-        }
+        // `java` is applied in apply() already (`java-library` / `application` bring it too), and the very
+        // next step adds to `compileOnly`, a configuration it creates.
         return kotlin
     }
 
@@ -524,7 +561,7 @@ class MindustryModPlugin @Inject constructor(
         val invalid = name.toCharArray().filter { it in INVALID_FILE_NAME_CHARS }
         if (invalid.isNotEmpty()) {
             throw GradleException(
-                "Invalid character(s) in download file name: " +
+                "Invalid character(s) in download.mindustryDownloadFileName: " +
                 invalid.toSet().joinToString("") { if (it == ' ') "' '" else "'$it'" } +
                 "\nFile name: \"$name\"\n" +
                 "Avoid spaces and the following characters: \\ / : * ? \" < > |"
@@ -538,6 +575,9 @@ class MindustryModPlugin @Inject constructor(
     }
 
     companion object {
+        /** Task group every task this plugin registers belongs to. */
+        private const val MINDUSTRY_GROUP = "mindustry"
+
         /** Directory under the Gradle user home that holds the auto-installed Android SDK. */
         private const val PLUGIN_DIR_NAME = "mindustry-mod-development-plugin"
 

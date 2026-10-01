@@ -22,7 +22,9 @@ internal object AndroidSdk {
      * string sort does not place `"android-9"` before `"android-30"`.
      */
     internal fun sdkVersionParts(dir: File): List<Int> {
-        val m = SDK_VERSION_PATTERN.findAll(dir.name).lastOrNull()?.value ?: return emptyList()
+        // The *first* number group, not the last: `android-30-ext7` is platform 30, and taking the last
+        // one compared it as 7 — older than `android-9`, so the wrong directory could win.
+        val m = SDK_VERSION_PATTERN.find(dir.name)?.value ?: return emptyList()
         return m.split('.').mapNotNull { it.toIntOrNull() }
     }
 

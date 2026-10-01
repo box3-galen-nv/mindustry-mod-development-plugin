@@ -79,7 +79,11 @@ internal object ClearModsTask {
                     project.logger.lifecycle("Cleaning old ${deleted.size} mod file(s) for '$modName':")
                     deleted.forEach { file ->
                         project.logger.lifecycle("- ${file.name}")
-                        file.delete()
+                        if (!file.delete()) {
+                            // On Windows the game may be running and holding the jar open; silently
+                            // leaving it behind means the next launch loads two copies of the mod.
+                            task.logger.warn("Could not delete '$file'; is the game still running?")
+                        }
                     }
                 }
             }

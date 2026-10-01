@@ -52,8 +52,9 @@ internal object GenerateIdeaRunConfigsTask {
                 taskName = taskName,
                 debugPort = debugPort.get(),
                 packagingTask = packagingTask,
+                warn = { message -> task.logger.warn(message) },
             )
-            written.forEach { project.logger.lifecycle("Wrote IDEA run configuration ${it.absolutePath}") }
+            written.forEach { task.logger.lifecycle("Wrote IDEA run configuration ${it.absolutePath}") }
         }
     }
 }

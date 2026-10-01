@@ -196,6 +196,7 @@ class MindustryModPluginIntegrationTest {
                 // Pinned: the default format carries {build_count}, so two separate Gradle invocations
                 // (deploy, then runMindustry) would look for differently named artifacts.
                 build { format = "{name}-{version}" }
+                download { mindustryDownloadVersion = "146" }
                 run { gameDataDir = file("data") }
                 debug { enableRunLogging = false }
             }

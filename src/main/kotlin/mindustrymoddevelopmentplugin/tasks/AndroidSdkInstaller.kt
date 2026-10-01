@@ -4,7 +4,9 @@ import mindustrymoddevelopmentplugin.dsl.MindustryDownloadConfig
 import java.io.File
 import java.io.FileOutputStream
 import java.net.URI
+import java.nio.channels.FileChannel
 import java.nio.file.Files
+import java.nio.file.StandardOpenOption
 import java.nio.file.StandardCopyOption
 import java.util.concurrent.TimeUnit
 import java.util.zip.ZipInputStream
@@ -26,6 +28,9 @@ internal object AndroidSdkInstaller {
     private const val TOOLS_ZIP_NAME = "commandlinetools.zip"
     private const val TOOLS_STAGING_DIR = "cmdline-tools-staging"
     private const val TOOLS_DIR = "cmdline-tools/latest"
+
+    /** Lock file serialising installs into one SDK directory. */
+    private const val INSTALL_LOCK_NAME = ".install.lock"
 
     /** Directory inside the SDK that holds sdkmanager's own cache/preferences. */
     private const val ANDROID_USER_HOME_DIR = ".android-user"
@@ -134,8 +139,30 @@ internal object AndroidSdkInstaller {
             )
         }
 
+        // Two `jarAndroid` tasks can run at the same time (`--parallel`, or one per mod project) and share
+        // this SDK directory: both would write the same `.part`, both would stage the same tree, and both
+        // would use the same sdkmanager cache. One lock per SDK directory serialises the whole install.
         sdkRoot.mkdirs()
+        FileChannel.open(
+            File(sdkRoot, INSTALL_LOCK_NAME).toPath(),
+            StandardOpenOption.CREATE,
+            StandardOpenOption.WRITE,
+        ).use { channel ->
+            channel.lock().use {
+                installLocked(sdkRoot, toolsUrl, packages, timeoutMinutes, log, extraArgs)
+            }
+        }
+    }
 
+    private fun installLocked(
+        sdkRoot: File,
+        toolsUrl: String,
+        packages: List<String>,
+        timeoutMinutes: Long,
+        log: (String) -> Unit,
+        extraArgs: List<String>,
+    ) {
+        // Re-checked under the lock: whichever process lost the race finds the tools already unpacked.
         if (!sdkManagerFile(sdkRoot).isFile) {
             val zip = download(sdkRoot, toolsUrl, timeoutMinutes, log)
             unpack(zip, sdkRoot, log)
@@ -212,6 +239,15 @@ internal object AndroidSdkInstaller {
         return target
     }
 
+    /** Moves a directory, falling back to a copy when a rename is not possible (different filesystems). */
+    private fun moveDirectory(from: File, to: File) {
+        runCatching { Files.move(from.toPath(), to.toPath(), StandardCopyOption.REPLACE_EXISTING) }
+            .onFailure {
+                from.copyRecursively(to, overwrite = true)
+                from.deleteRecursively()
+            }
+    }
+
     private fun unpack(zip: File, sdkRoot: File, log: (String) -> Unit) {
         val staging = File(sdkRoot, TOOLS_STAGING_DIR)
         staging.deleteRecursively()
@@ -243,13 +279,27 @@ internal object AndroidSdkInstaller {
             ?: throw GradleException("Unexpected command-line tools archive layout in ${zip.name}")
         File(sdkRoot, "cmdline-tools").mkdirs()
         val destination = File(sdkRoot, TOOLS_DIR)
-        if (destination.exists()) destination.deleteRecursively()
-        runCatching {
-            Files.move(inner.toPath(), destination.toPath(), StandardCopyOption.REPLACE_EXISTING)
-        }.onFailure {
-            inner.copyRecursively(destination, overwrite = true)
-            inner.deleteRecursively()
+        // Move the old tools aside instead of deleting them first: if this archive turns out to be broken
+        // (a mirror serving an HTML page, a full disk), the previous working sdkmanager can be put back
+        // instead of leaving a half-unpacked tree that the next build would happily use.
+        val previous = File(sdkRoot, "cmdline-tools/.previous")
+        previous.deleteRecursively()
+        if (destination.exists() && !destination.renameTo(previous)) {
+            destination.copyRecursively(previous, overwrite = true)
+            destination.deleteRecursively()
         }
+        try {
+            moveDirectory(inner, destination)
+        } catch (e: Exception) {
+            destination.deleteRecursively()
+            if (previous.exists()) {
+                runCatching { moveDirectory(previous, destination) }
+            }
+            throw GradleException(
+                "Could not install the command-line tools into '$destination': ${e.message}", e,
+            )
+        }
+        previous.deleteRecursively()
         staging.deleteRecursively()
     }
 

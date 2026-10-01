@@ -108,18 +108,25 @@ internal object ModFileReader {
         return i + 1
     }
 
-    /** Parses one scalar token: unquotes, unescapes, drops comments. */
-    private fun parseScalar(raw: String): String {
+    /**
+     * Parses one scalar token: unquotes, unescapes, drops comments.
+     *
+     * A value whose quote is never closed yields null, i.e. "no value here", rather than the truncated
+     * text up to the end of the line. Back-fill then keeps the DSL value instead of writing a broken name
+     * into the generated metadata.
+     */
+    private fun parseScalar(raw: String): String? {
         val t = raw.trim()
         if (t.isEmpty()) return ""
 
         if (t.startsWith("'''")) {
             val end = t.indexOf("'''", 3)
-            return if (end == -1) t.substring(3) else t.substring(3, end)
+            return if (end == -1) null else t.substring(3, end)
         }
         if (t[0] == '\'' || t[0] == '"') {
             val quote = t[0]
             val body = StringBuilder()
+            var closed = false
             var i = 1
             while (i < t.length) {
                 val c = t[i]
@@ -150,11 +157,14 @@ internal object ModFileReader {
                     i += 2
                     continue
                 }
-                if (c == quote) break
+                if (c == quote) {
+                    closed = true
+                    break
+                }
                 body.append(c)
                 i++
             }
-            return body.toString()
+            return if (closed) body.toString() else null
         }
 
         // Bare scalar: cut HJSON comments and anything following on the same line
@@ -190,7 +200,7 @@ internal object ModFileReader {
             i++
         }
         elements += current.toString()
-        return elements.map(::parseScalar).filter { it.isNotEmpty() }
+        return elements.map(::parseScalar).filterNotNull().filter { it.isNotEmpty() }
     }
 
     /** String field; null when absent, `""` when empty. */

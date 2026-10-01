@@ -105,6 +105,7 @@ abstract class MindustryDownloadConfig {
         mindustryDownloadFileName.convention(DEFAULT_FILE_NAME)
         androidSdkAutoDownload.convention(DEFAULT_ANDROID_SDK_AUTO_DOWNLOAD)
         androidSdkDownloadPackages.convention(DEFAULT_ANDROID_SDK_DOWNLOAD_PACKAGES)
+        androidSdkDownloadUrl.convention(commandLineToolsUrl())
         androidSdkDownloadTimeoutMinutes.convention(DEFAULT_ANDROID_SDK_DOWNLOAD_TIMEOUT_MINUTES)
     }
 
@@ -113,7 +114,9 @@ abstract class MindustryDownloadConfig {
         // mixes inline literals with named defaults.
 
         /** Default value of [mindustryDownloadVersion]. */
-        const val DEFAULT_VERSION = "146"
+        // v147 is the first release that understands -Dmindustry.data.dir, so the default works with
+        // run.gameDataDir instead of only warning about an unsupported version.
+        const val DEFAULT_VERSION = "147"
 
         /** Default value of [mindustryDownloadUrl]. */
         const val DEFAULT_URL = "https://github.com/Anuken/Mindustry/releases/download"
