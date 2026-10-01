@@ -1,5 +1,6 @@
 package mindustrymoddevelopmentplugin
 
+import mindustrymoddevelopmentplugin.tasks.ModWiring
 import mindustrymoddevelopmentplugin.game.MindustryApi
 import mindustrymoddevelopmentplugin.dsl.MindustryModRootExtension
 import mindustrymoddevelopmentplugin.meta.ModMeta
@@ -75,28 +76,28 @@ class MindustryModPluginTest {
 
         assertEquals(
             listOf("build/**", ".gradle/**", "**/*.kts", "**/caches/**", "data/**"),
-            plugin.modSourceExcludes(projectDir, File("/home/user/.gradle")),
+            ModWiring.modSourceExcludes(projectDir, File("/home/user/.gradle")),
             "a Gradle user home outside the project still leaves the cache globs; the default data " +
                 "directory is excluded even when the feature is off",
         )
         assertEquals(
             listOf("build/**", ".gradle/**", "**/*.kts", "**/caches/**", "data/**", "gradle-home/**"),
-            plugin.modSourceExcludes(projectDir, File("/work/mod/gradle-home")),
+            ModWiring.modSourceExcludes(projectDir, File("/work/mod/gradle-home")),
             "a project-local Gradle user home holds the DSL accessor sources, not mod sources",
         )
         // Exactly the project dir is not a subdirectory of itself.
         assertEquals(
             listOf("build/**", ".gradle/**", "**/*.kts", "**/caches/**", "data/**"),
-            plugin.modSourceExcludes(projectDir, projectDir),
+            ModWiring.modSourceExcludes(projectDir, projectDir),
         )
         assertEquals(
             listOf("build/**", ".gradle/**", "**/*.kts", "**/caches/**", "data/**", "custom-data/**"),
-            plugin.modSourceExcludes(projectDir, File("/home/user/.gradle"), File("/work/mod/custom-data")),
+            ModWiring.modSourceExcludes(projectDir, File("/home/user/.gradle"), File("/work/mod/custom-data")),
             "a custom data directory inside the project must not be compiled as mod source",
         )
         assertEquals(
             listOf("build/**", ".gradle/**", "**/*.kts", "**/caches/**", "data/**"),
-            plugin.modSourceExcludes(projectDir, File("/home/user/.gradle"), File("/tmp/somewhere/data")),
+            ModWiring.modSourceExcludes(projectDir, File("/home/user/.gradle"), File("/tmp/somewhere/data")),
             "a data directory outside the project adds no relative entry",
         )
     }
