@@ -224,6 +224,43 @@ internal object RootWiring {
             )
         }
 
+        // Android has no JVM to launch and no debugger to attach to. The task above is registered at apply
+        // time so a build script can still write tasks.named("runMindustry") { dependsOn("deploy") }; the
+        // staging behaviour is attached here, because run { } is only evaluated after apply().
+        project.afterEvaluate {
+            if (run.hostPlatform.get() == HostPlatform.Android && !run.useHeadlessServer.get()) {
+                val debugRequested = GradleProperties.booleanOrNull(project, IdeaRunConfigs.DEBUG_PROPERTY)
+                    ?: debug.enableDebug.get()
+                if (debugRequested) {
+                    throw GradleException(
+                        "Debugging is not possible on Android: the game runs in the Android runtime, which has " +
+                        "no JDWP socket to attach to. Set run.useHeadlessServer = true and attach to that JVM, " +
+                        "or debug on a desktop."
+                    )
+                }
+                if (!run.useDeployRun.get()) {
+                    throw GradleException(
+                        "run.useDeployRun = false cannot work on Android: the APK only loads classes.dex, which " +
+                        "only the merged 'deploy' artifact contains. Turn it back on, or use the headless server."
+                    )
+                }
+                warnAboutAndroidBuildDefaults(project, run)
+                val task = project.tasks.named("runMindustry").get()
+                task.actions.clear()
+                task.setDependsOn(emptyList<String>())
+                RunMindustryTask.configureAndroid(
+                    task, modProjects.get(), project,
+                    useDeployRun = true,
+                    deployTag = run.deployTag.get(),
+                    options = RunMindustryTask.AndroidOptions(
+                        appId = run.androidAppId.get(),
+                        stagingDir = run.androidStagingDir.get().asFile,
+                        launchApk = run.androidLaunchApk.get(),
+                    ),
+                )
+            }
+        }
+
         // Root project only: it owns `runMindustry`, and the generated files always land in the
         // root's `.run/`, so a subproject must not overwrite them with its own defaults.
         if (project == project.rootProject) {

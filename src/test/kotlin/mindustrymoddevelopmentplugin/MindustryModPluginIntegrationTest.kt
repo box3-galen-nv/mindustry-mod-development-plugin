@@ -1833,4 +1833,52 @@ class MindustryModPluginIntegrationTest {
             "the dex jar must exist:\n${result.output}",
         )
     }
+    @Test
+    fun `android run stages the artifact instead of launching a jvm`() {
+        // The Termux shape end to end: a configured d8 so no SDK is needed, Android as the host platform,
+        // and a staging directory instead of a game launch.
+        val d8 = fakeD8Script()
+        write("settings.gradle.kts", """rootProject.name = "test"""")
+        write("build.gradle.kts", """
+            ${pluginSnippet()}
+            ${kotlinSnippet()}
+            mindustryModRoot {
+                mindustryApiVersion = "159"
+                build {
+                    androidSdkDir = file("no-such-sdk")
+                    d8Executable = file("${d8.name}")
+                    format = "{name}-{version}"
+                }
+                download {
+                    mindustryDownloadVersion = "147"
+                    // No test may reach the network: a wrong branch must fail here, not download the game.
+                    mindustryDownloadUrl = "file:///nonexistent/mindustry-releases"
+                }
+                run {
+                    hostPlatform = mindustrymoddevelopmentplugin.platform.HostPlatform.Android
+                    androidStagingDir = file("staging")
+                }
+            }
+            mindustryMod { modMeta { name = "test-mod"; version = "1.0"; java = true } }
+        """)
+        write("src/test-mod/Mod.java", "package testmod;\npublic class Mod {}\n")
+
+        val result = runner().withArguments("deploy", "runMindustry").build()
+
+        val staged = rootDir.resolve("staging").listFiles()?.map { it.name }.orEmpty()
+        assertTrue(staged.any { it.endsWith(".jar") }, "the artifact must be staged: ${'$'}staged")
+        assertTrue(
+            result.output.contains("Mods -> Import mod"),
+            "the user must be told how to load it:${'\n'}${result.output}",
+        )
+        assertTrue(
+            !result.output.contains("DesktopLauncher"),
+            "Android must not launch the desktop client:${'\n'}${result.output}",
+        )
+        assertTrue(
+            !result.output.contains("github.com"),
+            "the suite must never fetch the real game:${'\n'}${result.output}",
+        )
+    }
+
 }

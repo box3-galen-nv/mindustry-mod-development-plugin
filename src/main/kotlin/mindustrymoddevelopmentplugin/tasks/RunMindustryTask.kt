@@ -51,6 +51,109 @@ internal object RunMindustryTask {
     )
 
     /**
+     * What running means on Android: stage the built jar and let the game import it.
+     *
+     * There is no JVM to launch (the APK's launcher takes no JVM arguments), no debugger to attach to, and
+     * since Android 11 no other app may write into the game's own `Android/data` directory. Copying the
+     * artifact somewhere the user can reach and importing it in the game is the only path that works.
+     */
+    class AndroidOptions(
+        /** The Android application id, used for the `am` calls and in the log message. */
+        val appId: String,
+        /** Where the artifact is staged for the game's import dialog. */
+        val stagingDir: File,
+        /** Also ask Android to launch the game, i.e. `am start`. */
+        val launchApk: Boolean,
+        /** The `am` executable; injectable so a desktop machine can exercise the failure path. */
+        val amExecutable: String = "am",
+    )
+
+    /**
+     * Wires `runMindustry` on Android: stage every mod's artifact, tell the user to import it, and
+     * optionally ask Android to bring the game up.
+     *
+     * No packaging dependency, exactly like the desktop task: `gradle deploy runMindustry` builds first.
+     */
+    fun configureAndroid(
+        task: Task,
+        modProjects: List<Project>,
+        project: Project,
+        useDeployRun: Boolean,
+        deployTag: String,
+        options: AndroidOptions,
+    ) {
+        val deployTaskName = if (useDeployRun) "deploy" else "jar"
+        val prefix = "[$deployTag]"
+
+        task.group = "mindustry"
+        task.description = "Stages the built mods for Android; import them in the game to load them."
+
+        task.doLast {
+            val logger = task.logger
+            options.stagingDir.mkdirs()
+            val staged = mutableListOf<File>()
+
+            modProjects.forEach { sub ->
+                val jarTask = sub.tasks.named(deployTaskName, Jar::class.java)
+                // The task's own path: the root project's path is ":", which would print "::deploy".
+                val packagingCommand = jarTask.get().path
+                val jarFile = jarTask.get().archiveFile.get().asFile
+                if (!jarFile.exists()) {
+                    logger.warn(
+                        "Skipping mod '${sub.name}': ${jarFile.path} does not exist yet. Build it first " +
+                        "(./gradlew $packagingCommand)."
+                    )
+                    return@forEach
+                }
+                val target = File(options.stagingDir, "$prefix${jarFile.name}")
+                jarFile.copyTo(target, overwrite = true)
+                staged.add(target)
+            }
+
+            if (staged.isEmpty()) {
+                logger.warn(
+                    "Nothing was staged, so there is nothing to import. Build a mod first, for example with " +
+                    "./gradlew deploy."
+                )
+                return@doLast
+            }
+
+            logger.lifecycle(
+                "Staged ${staged.size} jar(s) in ${options.stagingDir.absolutePath}: " +
+                staged.joinToString(", ") { it.name } +
+                ". On the phone, open the game and use Mods -> Import mod to pick the file; this build " +
+                "cannot write the game's own mods folder on Android 11 or later."
+            )
+
+            // Best effort: without `am` (a desktop machine, a locked-down ROM) the staging above is still
+            // everything the user needs, so a failure here is a warning rather than the end of the task.
+            runAm(task, options, "force-stop", options.appId)
+            if (options.launchApk) {
+                runAm(task, options, "start", "-n", "${options.appId}/mindustry.android.AndroidLauncher")
+            }
+        }
+    }
+
+    /** Runs `am` and reports what it said; a missing or refusing `am` never fails the build. */
+    private fun runAm(task: Task, options: AndroidOptions, vararg args: String) {
+        val command = listOf(options.amExecutable) + args
+        runCatching {
+            val process = ProcessBuilder(command).redirectErrorStream(true).start()
+            val output = process.inputStream.bufferedReader().readText()
+            process.waitFor()
+            process.exitValue() to output
+        }.onSuccess { (exit, output) ->
+            if (exit == 0) {
+                task.logger.lifecycle("Ran ${command.joinToString(" ")}")
+            } else {
+                task.logger.warn("${command.joinToString(" ")} exited with $exit: ${output.trim()}")
+            }
+        }.onFailure {
+            task.logger.warn("Could not run '${command.joinToString(" ")}': ${it.message}")
+        }
+    }
+
+    /**
      * Wires `runMindustry`.
      *
      * Packaging is not a dependency of this task. `gradle <packaging> runMindustry` builds first because
