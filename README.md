@@ -12,9 +12,7 @@ Handles mod metadata generation, jar packaging, Android DEX compilation, and gam
 ### Apply the plugin
 
 The plugin is published on the [Gradle Plugin Portal](https://plugins.gradle.org/), which Gradle already
-searches, so no repository has to be declared for it. The configuration cache is **not supported yet**:
-run with `--no-configuration-cache` (or keep `org.gradle.configuration-cache` unset) until the log-stream
-listener is reworked.
+searches, so no repository has to be declared for it. The configuration cache is supported: a build reuses its stored entry, so `--configuration-cache` (or `org.gradle.configuration-cache=true`) is fine to turn on.
 
 ```kotlin
 // build.gradle.kts (root)
@@ -333,7 +331,8 @@ Android. Termux is recognised from `TERMUX_VERSION` or a `PREFIX` inside `com.te
 org.gradle.vfs.watch=false   # Android cannot watch the file system, so -t/--continuous do not work
 org.gradle.daemon=false      # Android 12+ kills background processes when memory is tight
 org.gradle.jvmargs=-Xmx1g
-# This plugin does not support the configuration cache yet: leave org.gradle.configuration-cache unset.
+# Supported; uncomment the next line to turn it on.
+# org.gradle.configuration-cache=true
 ```
 
 Two findings worth knowing, both verified against the game:

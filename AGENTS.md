@@ -77,9 +77,12 @@ tasks/                  one internal object per task: <Name>Task.configure(...);
 - **Source roots**: add the project dir to `main`'s java and kotlin source dirs (`srcDir`, never
   `setSrcDirs`), excluding `build/`, `.gradle/`, `**/*.kts` (the Kotlin source filter matches scripts),
   any Gradle user home inside the project, and `data/`.
-- **The configuration cache is not supported** (the log-stream listener registers a plain provider as
-  a task-completion listener, which Gradle rejects). Say so in the READMEs instead of implying support;
-  fixing it means moving that listener into a `BuildService` and keeping `Project` out of task actions.
+- **The configuration cache is supported, and it constrains the code**: a task action may hold only plain
+  values (a `File`, a `String`, a `FileCollection`, a `BuildService` provider). The task-completion listener
+  is a `BuildService` (`RunLogging.CleanupService`), never a plain provider, and no action may reach back
+  into a `Project` or the extension that owns one — `ModWiring`/`RootWiring` resolve what the tasks need
+  while configuring. Verify a change by running a task twice with `--configuration-cache` and requiring
+  `stored` and then `reused`.
 - **`runMindustry` declares no inputs/outputs on purpose**: it launches the game, so UP-TO-DATE would
   skip the launch. It depends only on `downloadMindustry` + `clearMods`; packaging is the user's call
   (`gradle deploy runMindustry`, or their own `dependsOn`). A bare task name matches *every* project,

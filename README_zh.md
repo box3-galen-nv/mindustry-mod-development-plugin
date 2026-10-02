@@ -11,7 +11,7 @@
 
 ### 引入插件
 
-插件发布在 [Gradle Plugin Portal](https://plugins.gradle.org/) 上，Gradle 默认就会去那里找，因此**无需**为它声明仓库。目前**不支持 configuration cache**：请用 `--no-configuration-cache`（或不要开启 `org.gradle.configuration.cache`），等日志监听器重做后再启用。
+插件发布在 [Gradle Plugin Portal](https://plugins.gradle.org/) 上，Gradle 默认就会去那里找，因此**无需**为它声明仓库。配置缓存**已支持**：构建会复用已存的缓存条目，可以放心开启 `--configuration-cache`（或 `org.gradle.configuration-cache=true`）。
 
 ```kotlin
 // build.gradle.kts (root)
@@ -308,7 +308,8 @@ Android 11 起其它应用（包括 Termux）无权写入该目录，Android 14 
 org.gradle.vfs.watch=false   # Android 无法监听文件系统，因此 -t/--continuous 不可用
 org.gradle.daemon=false      # Android 12+ 在内存紧张时会杀后台进程
 org.gradle.jvmargs=-Xmx1g
-# 本插件尚不支持 configuration cache：请不要设置 org.gradle.configuration-cache。
+# 已支持；取消下一行注释即可开启。
+# org.gradle.configuration-cache=true
 ```
 
 两条已对游戏源码核实的事实：
