@@ -1,4 +1,4 @@
-package mindustrymoddevelopmentplugin.tasks
+package mindustrymoddevelopmentplugin.wiring
 
 import org.gradle.api.Project
 

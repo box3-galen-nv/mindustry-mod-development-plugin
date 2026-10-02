@@ -1,5 +1,6 @@
 package mindustrymoddevelopmentplugin.tasks
 
+import mindustrymoddevelopmentplugin.idea.IdeaRunConfigs
 import org.gradle.api.Project
 import org.gradle.api.Task
 import org.gradle.api.provider.Provider

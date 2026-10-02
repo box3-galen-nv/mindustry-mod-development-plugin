@@ -1,5 +1,6 @@
-package mindustrymoddevelopmentplugin.tasks
+package mindustrymoddevelopmentplugin.idea
 
+import mindustrymoddevelopmentplugin.tasks.GenerateIdeaRunConfigsTask
 import java.io.File
 import org.gradle.api.Project
 

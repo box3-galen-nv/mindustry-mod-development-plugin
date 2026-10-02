@@ -1,5 +1,8 @@
 package mindustrymoddevelopmentplugin
 
+import mindustrymoddevelopmentplugin.sdk.AndroidSdk
+import mindustrymoddevelopmentplugin.idea.IdeaRunConfigs
+import mindustrymoddevelopmentplugin.logging.RunLogging
 import mindustrymoddevelopmentplugin.game.MindustryApi
 import mindustrymoddevelopmentplugin.dsl.MindustryRunConfig
 import java.io.File

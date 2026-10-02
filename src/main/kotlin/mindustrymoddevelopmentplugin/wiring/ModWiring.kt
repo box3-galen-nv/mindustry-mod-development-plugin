@@ -1,4 +1,4 @@
-package mindustrymoddevelopmentplugin.tasks
+package mindustrymoddevelopmentplugin.wiring
 
 import mindustrymoddevelopmentplugin.game.MindustryApi
 import mindustrymoddevelopmentplugin.game.GameDataDir
@@ -11,18 +11,17 @@ import mindustrymoddevelopmentplugin.dsl.MindustryModRootExtension
 import mindustrymoddevelopmentplugin.dsl.MindustryRunConfig
 import mindustrymoddevelopmentplugin.meta.ModFileReader
 import mindustrymoddevelopmentplugin.meta.ModMeta
-import mindustrymoddevelopmentplugin.tasks.GradleProperties
 import mindustrymoddevelopmentplugin.tasks.JarTask
 import mindustrymoddevelopmentplugin.tasks.DeployTask
 import mindustrymoddevelopmentplugin.tasks.BuildModHJsonTask
-import mindustrymoddevelopmentplugin.tasks.AndroidSdk
+import mindustrymoddevelopmentplugin.sdk.AndroidSdk
 import mindustrymoddevelopmentplugin.tasks.ClearModsTask
 import mindustrymoddevelopmentplugin.tasks.DownloadMindustryTask
 import mindustrymoddevelopmentplugin.tasks.GenerateIdeaRunConfigsTask
-import mindustrymoddevelopmentplugin.tasks.IdeaRunConfigs
+import mindustrymoddevelopmentplugin.idea.IdeaRunConfigs
 import mindustrymoddevelopmentplugin.tasks.JarAndroidTask
 import mindustrymoddevelopmentplugin.tasks.RunMindustryTask
-import mindustrymoddevelopmentplugin.tasks.RunLogging
+import mindustrymoddevelopmentplugin.logging.RunLogging
 import java.io.File
 import javax.inject.Inject
 import org.gradle.api.GradleException

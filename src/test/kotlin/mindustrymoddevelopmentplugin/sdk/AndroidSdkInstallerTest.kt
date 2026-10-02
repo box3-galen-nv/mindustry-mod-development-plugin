@@ -1,5 +1,6 @@
-package mindustrymoddevelopmentplugin.tasks
+package mindustrymoddevelopmentplugin.sdk
 
+import mindustrymoddevelopmentplugin.tasks.JarAndroidTask
 import java.io.File
 import java.nio.file.Path
 import java.util.zip.ZipEntry

@@ -1,6 +1,6 @@
 package mindustrymoddevelopmentplugin
 
-import mindustrymoddevelopmentplugin.tasks.ModWiring
+import mindustrymoddevelopmentplugin.wiring.ModWiring
 import mindustrymoddevelopmentplugin.game.MindustryApi
 import mindustrymoddevelopmentplugin.dsl.MindustryModRootExtension
 import mindustrymoddevelopmentplugin.meta.ModMeta

@@ -25,9 +25,9 @@ compilation and print `e:` daemon lines; ignore those and read the compiler diag
 ## Layout
 
 ```
-MindustryModPlugin.kt   entry point: apply(), configureRoot(), configureModule(), helpers — the only
-                        file left in the root package
-game/                   MindustryApi (game API dependency), GameDataDir (its data directory)
+MindustryModPlugin.kt   entry point: apply() and the afterEvaluate hooks — the only file left in the
+                        root package
+game/                   MindustryApi (the game API dependency), GameDataDir (its data directory)
 platform/               HostPlatform (Auto/Desktop/Android + Termux detection), TargetPlatform
                         (Jar/Android/All, the suffix a modVersion() is named for)
 meta/                   ModMeta (19 engine fields), ModFileReader (the engine's 4 metadata files),
@@ -35,10 +35,15 @@ meta/                   ModMeta (19 engine fields), ModFileReader (the engine's 
 dsl/                    the public DSL and *only* the DSL: the two extensions
                         (MindustryModRootExtension, MindustryModExtension) and the four nested
                         configs (download, run, debug, build). Nothing else belongs here.
-tasks/                  one internal object per task: <Name>Task.configure(...); non-task files are
-                        plain nouns (AndroidSdk, RunLogging, IdeaRunConfigs, ModWiring, RootWiring,
-                        GradleProperties). ModWiring is one mod project's wiring, RootWiring the root's,
-                        so the entry point stays a readable apply()
+tasks/                  the task objects and nothing else: one <Name>Task per file, each with a
+                        configure(...) that does the wiring
+wiring/                 ModWiring (one mod project's sources and tasks), RootWiring (the root's tasks,
+                        conventions and warnings), GradleProperties (reading -P/gradle.properties
+                        booleans by value)
+sdk/                    AndroidSdk (discovery and d8 command assembly), AndroidSdkInstaller (downloading
+                        and installing the SDK)
+idea/                   IdeaRunConfigs (the .run/*.xml generator)
+logging/               RunLogging (the log tee and the cleanup BuildService)
 ```
 
 ## Conventions
@@ -51,9 +56,11 @@ tasks/                  one internal object per task: <Name>Task.configure(...);
 - An **unterminated KDoc** (typically a leftover opening marker above a freshly written block) makes the
   compiler report impossible errors, such as unresolved references to a regex match type. The real
   diagnostic is a `Syntax error / Unclosed comment` at the *end* of the log — read the whole log.
-- **Packages say what a type is for**: `dsl/` is extensions and configs only, `game/` is knowledge about
-  the game, `platform/` is where things run, `meta/` is the engine's metadata and the mod's own naming,
-  `tasks/` is task wiring. The root package holds the plugin entry point and nothing else.
+- **Packages say what a type is for**: `dsl/` is extensions and configs only, `tasks/` is the task objects
+  and nothing else, `wiring/` registers and configures them, `game/` is knowledge about the game,
+  `platform/` is where things run, `meta/` is the engine's metadata and the mod's own naming, `sdk/` is
+  Android SDK tooling, `idea/` is the `.run/` generator, `logging/` is the log tee. The root package holds
+  the plugin entry point and nothing else.
 - **Defaults are named constants referenced from `init { }`**, never inline literals, so a KDoc can link
   to the constant and generated text can reuse it. This rule is the one place that is written down: do not
   repeat it as a comment inside every config class.

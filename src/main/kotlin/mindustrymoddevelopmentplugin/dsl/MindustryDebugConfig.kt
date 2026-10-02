@@ -1,5 +1,6 @@
 package mindustrymoddevelopmentplugin.dsl
 
+import mindustrymoddevelopmentplugin.logging.RunLogging
 import org.gradle.api.provider.Property
 
 /**

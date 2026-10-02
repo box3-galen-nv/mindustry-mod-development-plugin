@@ -44,7 +44,6 @@ abstract class MindustryRunConfig {
      * Where this build is expected to run: [HostPlatform.Auto] decides from the environment, and setting
      * it explicitly is how a desktop CI job describes a Termux target (or the other way round).
      */
-
     abstract val gameDataDir: DirectoryProperty
 
     /**
@@ -104,7 +103,6 @@ abstract class MindustryRunConfig {
      * The server is a plain JVM process: it is the only way to debug on Android, and it works on a desktop
      * too (a dedicated server for testing a mod without the GUI).
      */
-
     abstract val androidSdkInstallDir: DirectoryProperty
 
     init {

@@ -1,4 +1,4 @@
-package mindustrymoddevelopmentplugin.tasks
+package mindustrymoddevelopmentplugin.idea
 
 import java.io.File
 import java.nio.file.Path

@@ -1,4 +1,4 @@
-package mindustrymoddevelopmentplugin.tasks
+package mindustrymoddevelopmentplugin.sdk
 
 import java.io.File
 import org.gradle.api.GradleException

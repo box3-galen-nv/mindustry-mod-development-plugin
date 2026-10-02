@@ -1,5 +1,6 @@
 package mindustrymoddevelopmentplugin.tasks
 
+import mindustrymoddevelopmentplugin.logging.RunLogging
 import org.gradle.api.provider.Provider
 import java.io.BufferedOutputStream
 import java.io.File

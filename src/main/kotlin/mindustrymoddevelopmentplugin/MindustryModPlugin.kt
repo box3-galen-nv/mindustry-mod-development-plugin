@@ -1,41 +1,14 @@
 package mindustrymoddevelopmentplugin
 
-import mindustrymoddevelopmentplugin.game.MindustryApi
-import mindustrymoddevelopmentplugin.game.GameDataDir
-import mindustrymoddevelopmentplugin.platform.HostPlatform
-import mindustrymoddevelopmentplugin.meta.ArtifactNaming
-import mindustrymoddevelopmentplugin.dsl.MindustryBuildConfig
-import mindustrymoddevelopmentplugin.dsl.MindustryDownloadConfig
 import mindustrymoddevelopmentplugin.dsl.MindustryModExtension
-import mindustrymoddevelopmentplugin.dsl.MindustryModRootExtension
-import mindustrymoddevelopmentplugin.dsl.MindustryRunConfig
 import mindustrymoddevelopmentplugin.meta.ModFileReader
 import mindustrymoddevelopmentplugin.meta.ModMeta
-import mindustrymoddevelopmentplugin.tasks.RootWiring
-import mindustrymoddevelopmentplugin.tasks.ModWiring
-import mindustrymoddevelopmentplugin.tasks.GradleProperties
-import mindustrymoddevelopmentplugin.tasks.JarTask
-import mindustrymoddevelopmentplugin.tasks.DeployTask
-import mindustrymoddevelopmentplugin.tasks.BuildModHJsonTask
-import mindustrymoddevelopmentplugin.tasks.AndroidSdk
-import mindustrymoddevelopmentplugin.tasks.ClearModsTask
-import mindustrymoddevelopmentplugin.tasks.DownloadMindustryTask
-import mindustrymoddevelopmentplugin.tasks.GenerateIdeaRunConfigsTask
-import mindustrymoddevelopmentplugin.tasks.IdeaRunConfigs
-import mindustrymoddevelopmentplugin.tasks.JarAndroidTask
-import mindustrymoddevelopmentplugin.tasks.RunMindustryTask
-import mindustrymoddevelopmentplugin.tasks.RunLogging
-import java.io.File
+import mindustrymoddevelopmentplugin.wiring.RootWiring
+import mindustrymoddevelopmentplugin.wiring.ModWiring
+import mindustrymoddevelopmentplugin.logging.RunLogging
 import javax.inject.Inject
-import org.gradle.api.GradleException
 import org.gradle.api.Plugin
 import org.gradle.api.Project
-import org.gradle.api.logging.Logger
-import org.gradle.api.tasks.JavaExec
-import org.gradle.api.tasks.SourceSet
-import org.jetbrains.kotlin.gradle.dsl.KotlinProjectExtension
-import org.gradle.api.tasks.SourceSetContainer
-import org.gradle.api.tasks.bundling.Jar
 import org.gradle.build.event.BuildEventsListenerRegistry
 
 /**
@@ -108,26 +81,6 @@ class MindustryModPlugin @Inject constructor(
 
         ModWiring.configureModule(project, ext, hasModFile)
     }
-
-    // =========================================================================
-    //  Download + run (every project)
-    // =========================================================================
-
-    // =========================================================================
-    //  Mod projects: compile + package
-    // =========================================================================
-
-    // =========================================================================
-    //  Helpers
-    // =========================================================================
-
-    /**
-     * Warns when the configured game version cannot read `-Dmindustry.data.dir`.
-     *
-     * A warning rather than a failure: the game falls back to `MINDUSTRY_DATA_DIR` or its own per-OS
-     * directory, so the run still works — it just ignores the directory this build chose. Evaluated
-     * while `runMindustry` is configured, which is before the download starts.
-     */
 
     companion object {
         /** Task group every task this plugin registers belongs to. */

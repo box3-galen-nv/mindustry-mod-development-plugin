@@ -1,4 +1,4 @@
-package mindustrymoddevelopmentplugin.tasks
+package mindustrymoddevelopmentplugin.sdk
 
 import mindustrymoddevelopmentplugin.dsl.MindustryDownloadConfig
 import java.io.File

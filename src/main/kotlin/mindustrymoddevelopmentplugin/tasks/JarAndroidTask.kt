@@ -1,5 +1,7 @@
 package mindustrymoddevelopmentplugin.tasks
 
+import mindustrymoddevelopmentplugin.sdk.AndroidSdk
+import mindustrymoddevelopmentplugin.sdk.AndroidSdkInstaller
 import mindustrymoddevelopmentplugin.dsl.MindustryBuildConfig
 import mindustrymoddevelopmentplugin.dsl.MindustryDownloadConfig
 import java.io.File

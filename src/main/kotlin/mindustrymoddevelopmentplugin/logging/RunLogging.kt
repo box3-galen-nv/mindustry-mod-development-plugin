@@ -1,4 +1,4 @@
-package mindustrymoddevelopmentplugin.tasks
+package mindustrymoddevelopmentplugin.logging
 
 import java.io.OutputStream
 import java.util.concurrent.ConcurrentHashMap

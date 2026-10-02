@@ -1,5 +1,6 @@
 package mindustrymoddevelopmentplugin.tasks
 
+import mindustrymoddevelopmentplugin.logging.RunLogging
 import java.io.File
 import java.io.OutputStream
 import org.gradle.api.GradleException
