@@ -104,6 +104,11 @@ tasks/                  one internal object per task: <Name>Task.configure(...);
   default version change stopped matching a fixture's file name, the task fetched the real 73 MB game, the
   run launched it, and the suite stayed green because it only asserts task outcomes. Two tests now also
   assert that their output never mentions the release URL.
+- **Verify a jar by resolving it, never by a hard-coded name.** The default `build.format` carries
+  `{build_count}`, so each build writes a new file name; `unzip`-ing a remembered name inspects a stale
+  artifact and invents bugs. That happened here: two rounds were spent on a "missing metadata" bug that was
+  a leftover `*-1.0.0-*.jar` while the real output was `*-1.0.14-*.jar`, which had the metadata all along.
+  Pin the format in a test, or pick the newest file from the output directory.
 - **Two deliberate tradeoffs, both documented in the README**: `jarAndroid` fingerprints the SDK by path
   only (hashing a whole SDK costs more than re-running d8), and `build/buildCounter.txt` is read while the
   artifact name is resolved, so it is not a declared task input — the name changes anyway.
@@ -171,6 +176,9 @@ tasks/                  one internal object per task: <Name>Task.configure(...);
   `Anuken/MindustryRepo` is not public, so there is no better official alternative.
 - `-Dmindustry.data.dir` exists from **v147**, `MINDUSTRY_DATA_DIR` from **v126**, and the property wins.
   A headless server ignores both.
+- A mod built by this plugin loads in the real headless server: `server-release.jar` (checked with v146 and
+  v159.7) reports `1 mods loaded.` for a fixture whose metadata names its `main` class. There is **no**
+  `Loading mod:` line in those versions — the string comes from elsewhere, so grepping for it wastes time.
 - `Mods.load()` lists `<dataDir>/mods` flat and keeps `*.jar`, `*.zip` and folders containing a
   metadata file — subdirectories are not scanned. `mod.hjson` starts at v101, the `mindustry.mod.*`
   package at v102.

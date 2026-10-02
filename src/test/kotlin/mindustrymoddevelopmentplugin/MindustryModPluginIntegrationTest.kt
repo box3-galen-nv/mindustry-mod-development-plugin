@@ -1881,4 +1881,46 @@ class MindustryModPluginIntegrationTest {
         )
     }
 
+    @Test
+    fun `the built jar carries the mod metadata`() {
+        // A jar without its metadata is not a mod the game can load, and nothing in this suite looked inside
+        // the jar. The format is pinned so the artifact name is deterministic: the default carries
+        // {build_count}, and inspecting a stale file under a hard-coded name is how a phantom bug was chased.
+        write("settings.gradle.kts", """rootProject.name = "test"""")
+        write("build.gradle.kts", """
+            ${pluginSnippet()}
+            mindustryModRoot {
+                mindustryApiVersion = "159"
+                build { format = "{name}-{version}" }
+                download {
+                    mindustryDownloadVersion = "147"
+                    // No test may reach the network for the game itself.
+                    mindustryDownloadUrl = "file:///nonexistent/mindustry-releases"
+                }
+            }
+            mindustryMod { generateModMeta = true }
+            modMeta { name = "meta-mod"; version = "1.0"; java = true }
+        """)
+        write("Meta.java", "package metamod;\npublic class Meta {}\n")
+
+        val result = runner().withArguments("jar").build()
+
+        assertTrue(result.task(":jar")?.outcome == TaskOutcome.SUCCESS, result.output)
+        val jar = rootDir.resolve("build/libs/meta-mod-1.0-Jar.jar")
+        assertTrue(
+            jar.isFile,
+            "expected ${jar.path}, found ${rootDir.resolve("build/libs").listFiles()?.toList()}",
+        )
+        val entries = ZipFile(jar).use { zip -> zip.entries().asSequence().map { it.name }.toList() }
+        assertTrue(entries.contains("mod.json"), "the metadata must be packaged: $entries")
+        val metadata = ZipFile(jar).use { zip ->
+            zip.getInputStream(zip.getEntry("mod.json")).bufferedReader().readText()
+        }
+        assertTrue(
+            metadata.contains("\"name\": \"meta-mod\""),
+            "the jar must carry this mod's own metadata: $metadata",
+        )
+    }
+
+
 }
