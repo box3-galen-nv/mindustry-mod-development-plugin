@@ -89,7 +89,7 @@ internal abstract class TestKitFixture {
 
     /**
      * Apply Kotlin plugin via `buildscript` + `apply` instead of `plugins` block,
-     * because [withPluginClasspath] already puts kotlin-gradle-plugin on the classpath
+     * because [GradleRunner.withPluginClasspath] already puts kotlin-gradle-plugin on the classpath
      * and specifying a version in `plugins` causes a version conflict.
      */
 

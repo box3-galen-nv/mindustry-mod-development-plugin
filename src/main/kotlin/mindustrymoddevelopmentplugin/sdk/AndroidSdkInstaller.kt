@@ -307,7 +307,7 @@ internal object AndroidSdkInstaller {
     }
 
     /**
-     * Whether [arg] is a flag the plugin's own `sdkmanager` invocation already decides.
+     * Whether the receiver is a flag the plugin's own `sdkmanager` invocation already decides.
      *
      * Accepts both the `--flag` and the `--flag=value` spelling. A package spec has no `-` prefix and
      * is therefore not rejected here, though it would end up installed alongside the configured ones.
@@ -348,7 +348,7 @@ internal object AndroidSdkInstaller {
         val process = builder.start()
 
         /*
-        The sdkmanager process can exit before it reads a single answer (a broken manifest, an SDK root
+        The sdkmanager process can exit before it reads a single answer — a broken manifest, an SDK root —
         and writing to its stdin then raises "Broken pipe". Letting that exception escape replaced the
         output that says what actually went wrong — the reported failure was "Broken pipe" instead of
         the hint naming the setting to change. It is timing-dependent, which is why it surfaced on one

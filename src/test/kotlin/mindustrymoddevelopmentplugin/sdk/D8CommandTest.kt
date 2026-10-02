@@ -7,7 +7,7 @@ import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
 
 /**
- * Verifies how [buildD8Command] is assembled: the d8 binary, the --classpath dependency pairs,
+ * Verifies how [AndroidSdk.buildD8Command] is assembled: the d8 binary, the --classpath dependency pairs,
  * the default --min-api, where custom extraArgs are inserted, --output and the input jar.
  */
 class D8CommandTest {

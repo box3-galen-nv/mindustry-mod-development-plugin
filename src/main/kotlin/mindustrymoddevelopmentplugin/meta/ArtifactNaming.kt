@@ -14,7 +14,7 @@ import org.gradle.api.Project
  *
  * Two callers need the same answer from the same inputs: the plugin, when it names the `jar` /
  * `jarAndroid` / `deploy` outputs, and the public [MindustryModExtension.modVersion], which users
- * read to learn the artifact name. They used to be separate implementations, and [modVersion]
+ * read to learn the artifact name. They used to be separate implementations, and [MindustryModExtension.modVersion]
  * silently supported fewer placeholders (`{author}` and `{time}` were missing) and skipped the
  * metadata-file fallback, so the reported name could differ from the produced one.
  */

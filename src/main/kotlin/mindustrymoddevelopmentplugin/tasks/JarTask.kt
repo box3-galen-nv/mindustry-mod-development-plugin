@@ -14,7 +14,7 @@ import org.gradle.api.tasks.bundling.Jar
 /**
  * Configures the `jar` task, which packages the desktop mod jar.
  *
- * The name is computed once here (via [mindustrymoddevelopmentplugin.dsl.ArtifactNaming]) and the build
+ * The name is computed once here (via [ArtifactNaming]) and the build
  * counter is advanced after a successful build.
  */
 internal object JarTask {

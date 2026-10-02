@@ -334,10 +334,10 @@ internal object RunMindustryTask {
             logStreamsClosed = true
             // Kotlin sees Gradle's getStandardOutput()/getErrorOutput() as non-null, but they are null
             // until the task sets them — the nullable locals say so without a redundant cast.
-            val standardOut: OutputStream? = task.standardOutput
-            val standardErr: OutputStream? = task.errorOutput
-            standardOut?.close()
-            standardErr?.close()
+            val standardOut: OutputStream = task.standardOutput
+            val standardErr: OutputStream = task.errorOutput
+            standardOut.close()
+            standardErr.close()
         }
         task.doLast { closeLogStreams() }
         // The path is read here, at configuration time: reaching for `task.path` inside the action would

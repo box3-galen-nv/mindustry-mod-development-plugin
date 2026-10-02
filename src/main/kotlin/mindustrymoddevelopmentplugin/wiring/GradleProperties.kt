@@ -23,7 +23,7 @@ internal object GradleProperties {
     }
 
     /**
-     * Like [booleanProperty], but null when the property was not given at all.
+     * Like [boolean], but null when the property was not given at all.
      *
      * Used where a command-line switch must be able to override a DSL default in both directions:
      * `-PmindustryDebug=false` has to win over `debug { enableDebug = true }`, which a plain

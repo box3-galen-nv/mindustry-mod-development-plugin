@@ -107,7 +107,7 @@ internal object ModWiring {
                 "Project '${project.path}' already has a 'deploy' task, so the plugin did not add its own " +
                 "merge task. runMindustry will not deploy this project's mod until that task is renamed."
             )
-            return@configureModule
+            return
         }
         project.tasks.register("deploy", Jar::class.java) { task ->
             task.group = MindustryModPlugin.MINDUSTRY_GROUP

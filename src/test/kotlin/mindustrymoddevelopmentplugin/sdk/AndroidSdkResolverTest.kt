@@ -9,7 +9,7 @@ import org.junit.jupiter.api.assertThrows
 import org.junit.jupiter.api.io.TempDir
 
 /**
- * Verifies the lookup priority of [resolveAndroidSdkDir]:
+ * Verifies the lookup priority of [AndroidSdk.resolveAndroidSdkDir]:
  * configured androidSdkDir → ANDROID_HOME → ANDROID_SDK_ROOT → user home → throw.
  * env / userHome / osName are all injectable, so no real environment is needed.
  */

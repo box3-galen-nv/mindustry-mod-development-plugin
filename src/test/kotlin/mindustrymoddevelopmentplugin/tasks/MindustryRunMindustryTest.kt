@@ -122,9 +122,11 @@ class MindustryRunMindustryTest {
             debug = RunMindustryTask.DebugOptions(enabled = true, port = 5012, suspend = true),
         )
 
+        // Resolved through error() so the value is non-null from here on: a preceding assertTrue(jdwp != null)
+        // is understood by the IDE but not by the compiler, which left a `!!` that the IDE called redundant.
         val jdwp = task.jvmArgs.orEmpty().singleOrNull { it.contains("jdwp") }
-        assertTrue(jdwp != null, "expected a jdwp argument, got ${task.jvmArgs}")
-        assertTrue(jdwp!!.contains("transport=dt_socket"), jdwp)
+            ?: error("expected a jdwp argument, got ${task.jvmArgs}")
+        assertTrue(jdwp.contains("transport=dt_socket"), jdwp)
         assertTrue(jdwp.contains("server=y"), jdwp)
         assertTrue(jdwp.contains("suspend=y"), jdwp)
         assertTrue(jdwp.contains("5012"), jdwp)
@@ -249,8 +251,9 @@ class MindustryRunMindustryTest {
 
         val error = assertThrows<GradleException> { runDoFirst(task) }
 
-        assertTrue(error.message!!.contains(dataDir.toString()), error.message!!)
-        assertTrue(error.message!!.contains("not a directory"), error.message!!)
+        val message = error.message.orEmpty()
+        assertTrue(message.contains(dataDir.toString()), message)
+        assertTrue(message.contains("not a directory"), message)
     }
 
     // ---- packaging is not a dependency ----
