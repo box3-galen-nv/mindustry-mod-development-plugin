@@ -88,7 +88,10 @@ internal object ModWiring {
         project.tasks.register("buildModHJson") { task ->
             task.group = MindustryModPlugin.MINDUSTRY_GROUP
             task.description = "Writes mod.json / mod.hjson from the modMeta { } block."
-            BuildModHJsonTask.configure(task, ext, generateMeta, useHJson, project, modFileName)
+            BuildModHJsonTask.configure(
+                task, ext.modMeta, generateMeta, useHJson, project.projectDir,
+                project.layout.buildDirectory.file(modFileName).get().asFile,
+            )
         }
 
         project.tasks.named("jar", Jar::class.java) { task ->

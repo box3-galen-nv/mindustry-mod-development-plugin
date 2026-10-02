@@ -7,6 +7,7 @@ import mindustrymoddevelopmentplugin.dsl.MindustryModRootExtension
 import mindustrymoddevelopmentplugin.meta.ModFileReader
 import java.io.File
 import org.gradle.api.Project
+import org.gradle.api.logging.Logger
 import org.gradle.api.GradleException
 import org.gradle.api.Task
 
@@ -19,71 +20,44 @@ import org.gradle.api.Task
  */
 internal object ClearModsTask {
     /**
+     * One mod's cleanup: the name to report and the pattern its own artifacts match.
+     *
+     * Plain values on purpose — the action must not hold a `Project`, which the configuration cache refuses
+     * to serialize, so the projects are resolved by [cleanupsFor] while configuring.
+     */
+    class ModCleanup(val name: String, val pattern: Regex)
+
+    /**
      * Wires removal of previously deployed jars from [modsDir].
      *
-     * @param modProjects the mod subprojects whose artifacts may be removed
+     * @param cleanups one entry per mod project; empty means nothing is deleted
      * @param cleanDeployedFiles when false the task does nothing
-     * @param deployTag tag of the files this plugin deployed
      */
     fun configure(
         task: Task,
-        modProjects: List<Project>,
+        cleanups: List<ModCleanup>,
         cleanDeployedFiles: Boolean,
-        deployTag: String,
         modsDir: File,
-        project: Project,
     ) {
         task.doFirst {
             if (!cleanDeployedFiles) return@doFirst
             modsDir.mkdirs()
-            // List the directory once instead of calling listFiles() again for every project.
+            // List the directory once instead of calling listFiles() again for every mod.
             val existing = modsDir.listFiles().orEmpty()
 
-            modProjects.forEach { sub ->
-                // Never clean without a resolved name. An empty name matches every
-                //     marked jar (`contains("")` is always true), which would wipe the
-                //     deployed files of unrelated mods.
-                val modName = resolveModName(sub)
-                if (modName.isNullOrBlank()) {
-                    project.logger.warn(
-                        "Skipping mod cleanup for '${sub.name}': no mod name found in the " +
-                        "mindustryMod { } DSL or in mod.hjson / mod.json / plugin.hjson / plugin.json."
-                    )
-                    return@forEach
+            cleanups.forEach { cleanup ->
+                val deleted = existing.filter {
+                    it.extension == "jar" && cleanup.pattern.containsMatchIn(it.name)
                 }
+                if (deleted.isEmpty()) return@forEach
 
-                // Substring matching made mod "my" delete another mod's marked jar as well; the pattern is
-                // derived from build.format so only this mod's own artifacts match.
-                val ext = sub.extensions.findByType(MindustryModExtension::class.java)
-                    ?: throw GradleException(
-                        "Project '${sub.path}' has a 'deploy' task of type Jar but the " +
-                        "mindustry-mod-development plugin is not applied to it, so clearMods cannot tell " +
-                        "which of its files are mod deployments. Either apply the plugin there or rename " +
-                        "that task."
-                    )
-                val rootExt = sub.rootProject.extensions.findByType(MindustryModRootExtension::class.java)
-                val format = rootExt?.build?.format?.get() ?: MindustryBuildConfig.DEFAULT_FORMAT
-                val pattern = deployedJarPattern(
-                    deployTag = deployTag,
-                    values = ArtifactNaming.values(sub, ext),
-                    format = format,
-                    suffixes = listOf(
-                        rootExt?.build?.jarSuffix?.get() ?: MindustryBuildConfig.DEFAULT_JAR_SUFFIX,
-                        rootExt?.build?.androidSuffix?.get() ?: MindustryBuildConfig.DEFAULT_ANDROID_SUFFIX,
-                        rootExt?.build?.deploySuffix?.get() ?: MindustryBuildConfig.DEFAULT_DEPLOY_SUFFIX,
-                    ),
-                )
-                val deleted = existing.filter { it.extension == "jar" && pattern.containsMatchIn(it.name) }
-
-                if (deleted.isNotEmpty()) {
-                    project.logger.lifecycle("Cleaning old ${deleted.size} mod file(s) for '$modName':")
-                    deleted.forEach { file ->
-                        project.logger.lifecycle("- ${file.name}")
-                        if (!file.delete()) {
-                            // On Windows the game may be running and holding the jar open; silently
-                            // leaving it behind means the next launch loads two copies of the mod.
-                            task.logger.warn("Could not delete '$file'; is the game still running?")
-                        }
+                task.logger.lifecycle("Cleaning old ${deleted.size} mod file(s) for '${cleanup.name}':")
+                deleted.forEach { file ->
+                    task.logger.lifecycle("- ${file.name}")
+                    if (!file.delete()) {
+                        // On Windows the game may be running and holding the jar open; leaving it behind
+                        // silently means the next launch loads two copies of the mod.
+                        task.logger.warn("Could not delete '$file'; is the game still running?")
                     }
                 }
             }
@@ -91,11 +65,53 @@ internal object ClearModsTask {
     }
 
     /**
-     * Resolve the mod's final name: the DSL first, then an existing metadata file; null if neither
-     * is present. **Callers must handle null** — an empty name matches any jar file name.
+     * Resolves one [ModCleanup] per mod project, while configuring.
+     *
+     * A project whose name cannot be resolved is skipped with a warning rather than guessed at: an empty
+     * name matches every marked jar, which would wipe the deployments of unrelated mods.
      */
-    private fun resolveModName(project: Project): String? {
-        val dslName = project.extensions.findByType(MindustryModExtension::class.java)?.modMeta?.name
+    fun cleanupsFor(projects: List<Project>, deployTag: String, logger: Logger): List<ModCleanup> {
+        val cleanups = mutableListOf<ModCleanup>()
+        projects.forEach { sub ->
+            val ext = sub.extensions.findByType(MindustryModExtension::class.java)
+                ?: throw GradleException(
+                    "Project '${sub.path}' has a 'deploy' task of type Jar but the " +
+                    "mindustry-mod-development plugin is not applied to it, so clearMods cannot tell " +
+                    "which of its files are mod deployments. Either apply the plugin there or rename " +
+                    "that task."
+                )
+            val modName = resolveModName(sub, ext)
+            if (modName.isNullOrBlank()) {
+                logger.warn(
+                    "Skipping mod cleanup for '${sub.name}': no mod name found in the mindustryMod { } DSL " +
+                    "or in mod.hjson / mod.json / plugin.hjson / plugin.json."
+                )
+                return@forEach
+            }
+            val rootExt = sub.rootProject.extensions.findByType(MindustryModRootExtension::class.java)
+            cleanups += ModCleanup(
+                name = modName,
+                pattern = deployedJarPattern(
+                    deployTag = deployTag,
+                    values = ArtifactNaming.values(sub, ext),
+                    format = rootExt?.build?.format?.get() ?: MindustryBuildConfig.DEFAULT_FORMAT,
+                    suffixes = listOf(
+                        rootExt?.build?.jarSuffix?.get() ?: MindustryBuildConfig.DEFAULT_JAR_SUFFIX,
+                        rootExt?.build?.androidSuffix?.get() ?: MindustryBuildConfig.DEFAULT_ANDROID_SUFFIX,
+                        rootExt?.build?.deploySuffix?.get() ?: MindustryBuildConfig.DEFAULT_DEPLOY_SUFFIX,
+                    ),
+                ),
+            )
+        }
+        return cleanups
+    }
+
+    /**
+     * Resolve the mod's final name: the DSL first, then an existing metadata file; null if neither is
+     * present. **Callers must handle null** — an empty name matches any jar file name.
+     */
+    private fun resolveModName(project: Project, ext: MindustryModExtension): String? {
+        val dslName = ext.modMeta.name
         if (!dslName.isNullOrBlank()) return dslName
         return ModFileReader.readMetaValue(project.projectDir, "name")
     }

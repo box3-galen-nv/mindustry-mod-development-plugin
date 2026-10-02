@@ -168,9 +168,11 @@ internal object RootWiring {
             task.group = MindustryModPlugin.MINDUSTRY_GROUP
             task.description = "Removes the mod jars this plugin deployed earlier from the mods folder."
             ClearModsTask.configure(
-                task, modProjects.get(), run.cleanDeployedFiles.get(),
-                run.deployTag.get(), modsDir.get(), project,
-            )
+                    task,
+                    ClearModsTask.cleanupsFor(modProjects.get(), run.deployTag.get(), project.logger),
+                    run.cleanDeployedFiles.get(),
+                    modsDir.get(),
+                )
         }
 
         project.tasks.register("runMindustry", JavaExec::class.java) { task ->
