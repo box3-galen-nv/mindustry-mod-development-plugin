@@ -4,6 +4,8 @@ import mindustrymoddevelopmentplugin.dsl.MindustryBuildConfig
 import mindustrymoddevelopmentplugin.dsl.MindustryDownloadConfig
 import java.io.File
 import java.util.concurrent.TimeUnit
+import org.gradle.api.file.FileCollection
+import org.gradle.api.logging.Logger
 import org.gradle.api.GradleException
 import org.gradle.api.Project
 import org.gradle.api.Task
@@ -55,7 +57,7 @@ internal object JarAndroidTask {
         libsDir: File,
         jarName: String,
         androidName: String,
-        project: Project,
+        deps: FileCollection,
         options: Options = Options(),
     ) {
         task.dependsOn("jar")
@@ -91,7 +93,7 @@ internal object JarAndroidTask {
                 // never to install one, which is what makes this usable on Termux.
                 AndroidSdk.findAndroidSdkDir(options.androidSdkDir?.orNull?.asFile)
             } else {
-                resolveOrInstallSdk(project, options)
+                resolveOrInstallSdk(options, task.logger)
             }
             val d8Command = options.d8Command ?: AndroidSdk.resolveD8(null, null, sdkRoot)
                 ?: throw GradleException(
@@ -111,15 +113,16 @@ internal object JarAndroidTask {
                 )
             }
 
-            val deps = buildSet {
-                addAll(project.configurations.getByName("compileClasspath").files)
-                addAll(project.configurations.getByName("runtimeClasspath").files)
+            // Passed in as a FileCollection: it is a type the configuration cache supports, unlike the
+            // project that used to be read here.
+            val classpath = buildList {
+                addAll(deps.files)
                 if (androidJar != null) add(androidJar)
             }
 
             val args = AndroidSdk.buildD8Command(
                 d8Command = d8Command,
-                deps = deps,
+                deps = classpath,
                 extraArgs = options.d8Args,
                 output = androidOutput,
                 input = jarInput,
@@ -180,7 +183,7 @@ internal object JarAndroidTask {
      * With auto-download off this falls back to [AndroidSdk.resolveAndroidSdkDir], which fails loudly
      * with the list of locations it probed — the behavior before auto-download existed.
      */
-    internal fun resolveOrInstallSdk(project: Project, options: Options): File {
+    internal fun resolveOrInstallSdk(options: Options, logger: Logger): File {
         val configuredDir = options.androidSdkDir?.orNull?.asFile
         val existing = AndroidSdk.findAndroidSdkDir(configuredDir)
 
@@ -191,7 +194,7 @@ internal object JarAndroidTask {
         if (!AndroidSdkInstaller.needsInstall(existing, options.sdkDownloadPackages)) return existing!!
 
         val target = configuredDir ?: options.sdkInstallDir
-        project.logger.lifecycle(
+        logger.lifecycle(
             "Android SDK missing or incomplete in '$target' — downloading the command-line tools " +
             "and installing: ${options.sdkDownloadPackages.joinToString(", ")}"
         )
@@ -201,7 +204,7 @@ internal object JarAndroidTask {
             packages = options.sdkDownloadPackages,
             extraArgs = options.sdkExtraArgs,
             timeoutMinutes = options.sdkDownloadTimeoutMinutes,
-            log = { project.logger.lifecycle("[android-sdk] $it") },
+            log = { logger.lifecycle("[android-sdk] $it") },
         )
         return target
     }

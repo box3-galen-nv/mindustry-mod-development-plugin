@@ -212,13 +212,12 @@ class AndroidSdkInstallerTest {
         File(sdk, "build-tools/34.0.0/d8").writeText("x")
 
         val project = ProjectBuilder.builder().build()
-        val result = JarAndroidTask.resolveOrInstallSdk(
-            project,
-            jarAndroidOptions(
+        val result = JarAndroidTask.resolveOrInstallSdk(jarAndroidOptions(
                 project, sdk,
                 // A URL that cannot work: if an install were attempted, this test would fail.
                 packages = listOf("platforms;android-34", "build-tools;34.0.0"),
             ),
+            project.logger,
         )
 
         assertTrue(result == sdk, "the existing SDK must be reused, got $result")
@@ -238,12 +237,11 @@ class AndroidSdkInstallerTest {
         val record = File(root, "sdkmanager-calls.txt")
         val url = fakeToolsArchive(record) // creates platforms/android-30 + build-tools/34.0.0
         val project = ProjectBuilder.builder().build()
-        val result = JarAndroidTask.resolveOrInstallSdk(
-            project,
-            jarAndroidOptions(
+        val result = JarAndroidTask.resolveOrInstallSdk(jarAndroidOptions(
                 project, sdk, url,
                 packages = listOf("platforms;android-30", "build-tools;34.0.0"),
             ),
+            project.logger,
         )
 
         assertTrue(result == sdk, "the configured dir is the install target, got $result")
@@ -260,13 +258,12 @@ class AndroidSdkInstallerTest {
         File(sdk, "build-tools/34.0.0/d8").writeText("x")
 
         val project = ProjectBuilder.builder().build()
-        val result = JarAndroidTask.resolveOrInstallSdk(
-            project,
-            jarAndroidOptions(
+        val result = JarAndroidTask.resolveOrInstallSdk(jarAndroidOptions(
                 project, sdk, "file:///nonexistent/commandlinetools.zip",
                 packages = listOf("platforms;android-34"),
                 autoDownload = false,
             ),
+            project.logger,
         )
 
         assertTrue(result == sdk, "auto-download off must fall back to the found SDK, got $result")

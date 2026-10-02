@@ -105,7 +105,14 @@ internal object ModWiring {
         project.tasks.register("jarAndroid") { task ->
             task.group = MindustryModPlugin.MINDUSTRY_GROUP
             task.description = "Builds the Android DEX jar with d8."
-            JarAndroidTask.configure(task, libsDir, names.jar, names.android, project, jarAndroidOptions(project, rootExt))
+            JarAndroidTask.configure(
+                    task, libsDir, names.jar, names.android,
+                    project.files(
+                        project.configurations.getByName("compileClasspath"),
+                        project.configurations.getByName("runtimeClasspath"),
+                    ),
+                    jarAndroidOptions(project, rootExt),
+                )
         }
 
         // A project may already deploy somewhere (a server, a container). Registering our own task under the
