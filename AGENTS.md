@@ -36,7 +36,9 @@ dsl/                    the public DSL and *only* the DSL: the two extensions
                         (MindustryModRootExtension, MindustryModExtension) and the four nested
                         configs (download, run, debug, build). Nothing else belongs here.
 tasks/                  one internal object per task: <Name>Task.configure(...); non-task files are
-                        plain nouns (AndroidSdk, RunLogging, IdeaRunConfigs)
+                        plain nouns (AndroidSdk, RunLogging, IdeaRunConfigs, ModWiring, RootWiring,
+                        GradleProperties). ModWiring is one mod project's wiring, RootWiring the root's,
+                        so the entry point stays a readable apply()
 ```
 
 ## Conventions
