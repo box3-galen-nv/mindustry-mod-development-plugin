@@ -1,5 +1,7 @@
 package mindustrymoddevelopmentplugin.tasks
 
+import org.gradle.api.logging.Logger
+import mindustrymoddevelopmentplugin.dsl.MindustryDownloadConfig
 import java.io.File
 import java.io.IOException
 import java.io.InputStream
@@ -213,4 +215,33 @@ internal object DownloadMindustryTask {
         if (!file.isFile || file.length() < MIN_PLAUSIBLE_JAR_BYTES) return false
         return file.inputStream().use { it.read() == 0x50 && it.read() == 0x4B }
     }
+
+    /**
+     * Substitutes `{version}` into the download file name template and validates the result.
+     *
+     * A space or one of `\ / : * ? " < > |` throws; CJK characters only warn. The `.jar` suffix is
+     * not part of the name — the caller appends it.
+     */
+    internal fun resolveDownloadFileName(download: MindustryDownloadConfig, logger: Logger): String {
+        val name = download.mindustryDownloadFileName.get()
+            .replace("{version}", download.mindustryDownloadVersion.get())
+
+        val invalid = name.toCharArray().filter { it in INVALID_FILE_NAME_CHARS }
+        if (invalid.isNotEmpty()) {
+            throw GradleException(
+                "Invalid character(s) in download.mindustryDownloadFileName: " +
+                invalid.toSet().joinToString("") { if (it == ' ') "' '" else "'$it'" } +
+                "\nFile name: \"$name\"\n" +
+                "Avoid spaces and the following characters: \\ / : * ? \" < > |"
+            )
+        }
+
+        if (CJK_CHARS.containsMatchIn(name)) {
+            logger.warn("Download file name \"$name\" contains CJK characters. This may cause issues on some operating systems.")
+        }
+        return name
+    }
+        private val INVALID_FILE_NAME_CHARS = setOf('\\', '/', ':', '*', '?', '"', '<', '>', '|', ' ')
+        private val CJK_CHARS =
+            Regex("[\u4e00-\u9fff\u3400-\u4dbf\u2e80-\u2eff\u2f00-\u2fdf\u3000-\u303f]")
 }
