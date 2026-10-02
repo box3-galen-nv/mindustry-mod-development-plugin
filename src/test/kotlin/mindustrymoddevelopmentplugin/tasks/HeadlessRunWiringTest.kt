@@ -24,7 +24,7 @@ class HeadlessRunWiringTest {
 
         RunMindustryTask.configure(
             task,
-            modProjects = emptyList(),
+            mods = emptyList(),
             downloadPath = File(project.projectDir, "game.jar"),
             modsDir = File(work, "config/mods"),
             project = project,
@@ -55,7 +55,7 @@ class HeadlessRunWiringTest {
 
         RunMindustryTask.configure(
             task,
-            modProjects = emptyList(),
+            mods = emptyList(),
             downloadPath = File(project.projectDir, "game.jar"),
             modsDir = File(dataDir, "mods"),
             project = project,

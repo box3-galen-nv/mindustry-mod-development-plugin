@@ -206,7 +206,8 @@ internal object RootWiring {
                 ?.let { File(File(it.workingDir, "config"), "mods") }
                 ?: modsDir.get()
             RunMindustryTask.configure(
-                task, modProjects.get(), downloadPath.get(), resolvedModsDir, project,
+                task, modArtifacts(modProjects.get(), if (run.useDeployRun.get()) "deploy" else "jar"),
+                downloadPath.get(), resolvedModsDir, project,
                 run.useDeployRun.get(), run.deployTag.get(),
                 debug.maxLogFiles.get(), debug.enableRunLogging.get(),
                 dataDir = resolvedDataDir,
@@ -251,7 +252,7 @@ internal object RootWiring {
                 task.actions.clear()
                 task.setDependsOn(emptyList<String>())
                 RunMindustryTask.configureAndroid(
-                    task, modProjects.get(), project,
+                    task, modArtifacts(modProjects.get(), "deploy"), project,
                     useDeployRun = true,
                     deployTag = run.deployTag.get(),
                     options = RunMindustryTask.AndroidOptions(
@@ -349,4 +350,21 @@ internal object RootWiring {
             "later (or \"latest\") to use it."
         )
     }
+
+    /**
+     * Resolves each mod project's artifact while configuring.
+     *
+     * The task actions copy these jars, so they must not hold the projects or the packaging tasks — the
+     * configuration cache cannot serialize those.
+     */
+    private fun modArtifacts(projects: List<Project>, deployTaskName: String): List<RunMindustryTask.ModArtifact> =
+        projects.map { sub ->
+            val jarTask = sub.tasks.named(deployTaskName, Jar::class.java).get()
+            RunMindustryTask.ModArtifact(
+                name = sub.name,
+                jar = jarTask.archiveFile.get().asFile,
+                // The task's own path: the root project's path is ":", which would print "::deploy".
+                packagingCommand = jarTask.path,
+            )
+        }
 }

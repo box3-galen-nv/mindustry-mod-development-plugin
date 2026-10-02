@@ -51,6 +51,14 @@ internal object RunMindustryTask {
     )
 
     /**
+     * One mod's built artifact, resolved while configuring.
+     *
+     * Plain values on purpose: the actions copy these jars into the mods directory, and holding the projects
+     * (or the tasks) they came from would stop the configuration cache from serializing `runMindustry`.
+     */
+    class ModArtifact(val name: String, val jar: File, val packagingCommand: String)
+
+    /**
      * What running means on Android: stage the built jar and let the game import it.
      *
      * There is no JVM to launch (the APK's launcher takes no JVM arguments), no debugger to attach to, and
@@ -76,7 +84,7 @@ internal object RunMindustryTask {
      */
     fun configureAndroid(
         task: Task,
-        modProjects: List<Project>,
+        mods: List<ModArtifact>,
         project: Project,
         useDeployRun: Boolean,
         deployTag: String,
@@ -84,6 +92,7 @@ internal object RunMindustryTask {
     ) {
         val deployTaskName = if (useDeployRun) "deploy" else "jar"
         val prefix = "[$deployTag]"
+        // Resolved while configuring: an action may not reach into the project for it.
 
         task.group = "mindustry"
         task.description = "Stages the built mods for Android; import them in the game to load them."
@@ -93,20 +102,16 @@ internal object RunMindustryTask {
             options.stagingDir.mkdirs()
             val staged = mutableListOf<File>()
 
-            modProjects.forEach { sub ->
-                val jarTask = sub.tasks.named(deployTaskName, Jar::class.java)
-                // The task's own path: the root project's path is ":", which would print "::deploy".
-                val packagingCommand = jarTask.get().path
-                val jarFile = jarTask.get().archiveFile.get().asFile
-                if (!jarFile.exists()) {
+            mods.forEach { mod ->
+                if (!mod.jar.exists()) {
                     logger.warn(
-                        "Skipping mod '${sub.name}': ${jarFile.path} does not exist yet. Build it first " +
-                        "(./gradlew $packagingCommand)."
+                        "Skipping mod '${mod.name}': ${mod.jar.path} does not exist yet. Build it first " +
+                        "(./gradlew ${mod.packagingCommand})."
                     )
                     return@forEach
                 }
-                val target = File(options.stagingDir, "$prefix${jarFile.name}")
-                jarFile.copyTo(target, overwrite = true)
+                val target = File(options.stagingDir, "$prefix${mod.jar.name}")
+                mod.jar.copyTo(target, overwrite = true)
                 staged.add(target)
             }
 
@@ -178,7 +183,7 @@ internal object RunMindustryTask {
 
     fun configure(
         task: JavaExec,
-        modProjects: List<Project>,
+        mods: List<ModArtifact>,
         downloadPath: File,
         modsDir: File,
         project: Project,
@@ -193,6 +198,8 @@ internal object RunMindustryTask {
     ) {
         val deployTaskName = if (useDeployRun) "deploy" else "jar"
         val prefix = "[$deployTag]"
+        // Resolved while configuring: an action may not reach into the project for it.
+        val logDir = project.layout.buildDirectory.dir("logger").get().asFile
 
         // The data directory the *game* will use: the server ignores -Dmindustry.data.dir and reads
         // <workingDir>/config instead, so the mods have to be staged there.
@@ -247,7 +254,7 @@ internal object RunMindustryTask {
                     )
                 }
                 gameDataDir.mkdirs()
-                project.logger.lifecycle("Game data directory: ${gameDataDir.absolutePath}")
+                task.logger.lifecycle("Game data directory: ${gameDataDir.absolutePath}")
             }
 
             // Usually <dataDir>/mods now: MindustryModPlugin derives that path from the data directory
@@ -257,35 +264,29 @@ internal object RunMindustryTask {
             // A port that is already taken makes the game JVM abort before it starts, with a
             //     JDWP error that is easy to misread as a game crash — warn first.
             if (debug.enabled && isPortInUse(debug.port)) {
-                project.logger.warn(
+                task.logger.warn(
                     "Debug port ${debug.port} is already in use, so the game JVM cannot open it. " +
                     "Change run.debugPort or stop whatever holds the port."
                 )
             }
 
-            modProjects.forEach { sub ->
-                val jarTask = sub.tasks.named(deployTaskName, Jar::class.java)
-                // The task's own path, not "<project.path>:<name>": the root project's path is ":", which
-                // would print "::deploy" and be copy-pasted as a broken command.
-                val packagingCommand = jarTask.get().path
-                val jarFile = jarTask.get().archiveFile.get().asFile
-                if (!jarFile.exists()) {
-                    project.logger.warn(
-                        "Skipping mod '${sub.name}': ${jarFile.path} does not exist yet. Build it first " +
-                        "(./gradlew $packagingCommand), pass it on the command line " +
-                        "(./gradlew $packagingCommand runMindustry), or add " +
-                        "tasks.named(\"runMindustry\") { dependsOn(\"$packagingCommand\") }."
+            mods.forEach { mod ->
+                if (!mod.jar.exists()) {
+                    task.logger.warn(
+                        "Skipping mod '${mod.name}': ${mod.jar.path} does not exist yet. Build it first " +
+                        "(./gradlew ${mod.packagingCommand}), pass it on the command line " +
+                        "(./gradlew ${mod.packagingCommand} runMindustry), or add " +
+                        "tasks.named(\"runMindustry\") { dependsOn(\"${mod.packagingCommand}\") }."
                     )
                     return@forEach
                 }
 
-                jarFile.copyTo(File(modsDir, "$prefix${jarFile.name}"), overwrite = true)
+                mod.jar.copyTo(File(modsDir, "$prefix${mod.jar.name}"), overwrite = true)
             }
 
             // Write the game output to a log file in build/logger/ (tee to console).
             //     Can be turned off via run.enableRunLogging = false.
             if (enableRunLogging) {
-                val logDir = project.layout.buildDirectory.dir("logger").get().asFile
                 logDir.mkdirs()
                 val logFile = File(logDir, "log_${SimpleDateFormat("yyyyMMdd_HHmmss_SSS").format(Date())}.log")
                 // Buffered — the game can emit tens of MB, and every unbuffered write
@@ -295,7 +296,7 @@ internal object RunMindustryTask {
                 // Delete old logs, keeping only the newest maxLogFiles entries. A value below one would
                 //     make drop() throw, and zero would delete the log this run is writing, so clamp it.
                 if (maxLogFiles < 1) {
-                    project.logger.warn(
+                    task.logger.warn(
                         "debug.maxLogFiles is $maxLogFiles; keeping one log file instead."
                     )
                 }

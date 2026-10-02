@@ -26,7 +26,7 @@ class MindustryRunMindustryTest {
         val task = project.tasks.register("runMindustry", JavaExec::class.java).get()
         RunMindustryTask.configure(
             task = task,
-            modProjects = emptyList(),
+            mods = emptyList(),
             downloadPath = File(project.projectDir, "game.jar"),
             modsDir = File(project.projectDir, "mods"),
             project = project,
@@ -221,7 +221,7 @@ class MindustryRunMindustryTest {
         val task = project.tasks.register("runMindustry", JavaExec::class.java).get()
         RunMindustryTask.configure(
             task = task,
-            modProjects = emptyList(),
+            mods = emptyList(),
             downloadPath = File(project.projectDir, "game.jar"),
             modsDir = File(dataDir, "mods"),
             project = project,
@@ -245,7 +245,7 @@ class MindustryRunMindustryTest {
         val task = project.tasks.register("runMindustry", JavaExec::class.java).get()
         RunMindustryTask.configure(
             task = task,
-            modProjects = emptyList(),
+            mods = emptyList(),
             downloadPath = File(project.projectDir, "game.jar"),
             modsDir = File(project.projectDir, "mods"),
             project = project,
@@ -276,7 +276,7 @@ class MindustryRunMindustryTest {
 
         RunMindustryTask.configure(
             task = task,
-            modProjects = listOf(sub),
+            mods = listOf(RunMindustryTask.ModArtifact("sub", File(project.projectDir, "sub.jar"), ":sub:deploy")),
             downloadPath = File(project.projectDir, "game.jar"),
             modsDir = File(project.projectDir, "mods"),
             project = project,
