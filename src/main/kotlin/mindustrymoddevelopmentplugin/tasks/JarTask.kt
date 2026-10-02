@@ -3,6 +3,7 @@ package mindustrymoddevelopmentplugin.tasks
 import mindustrymoddevelopmentplugin.meta.ArtifactNaming
 import mindustrymoddevelopmentplugin.dsl.MindustryModExtension
 import mindustrymoddevelopmentplugin.meta.ModFileReader
+import java.io.File
 import org.gradle.api.GradleException
 import org.gradle.api.Project
 import org.gradle.api.Task
@@ -31,6 +32,9 @@ internal object JarTask {
         modFileName: String,
         /** Only used in the error message, and captured so the action need not touch the project. */
         projectName: String = project.name,
+        /** The mod's resolved name and its counter file: plain values, so the action holds no project. */
+        metaName: String,
+        counterFile: File,
     ) {
         val configuredBuildModFile = project.layout.buildDirectory.file(modFileName).get().asFile
         task.dependsOn("buildModHJson")
@@ -41,7 +45,7 @@ internal object JarTask {
         //     If both mindustryMod { } DSL and mod.hjson / mod.json are absent,
         //     throw a helpful error showing the minimal required configuration.
         task.doFirst {
-            if (ext.modMeta.name.isBlank() && !hasModFile) {
+            if (metaName.isBlank() && !hasModFile) {
                 throw GradleException(
                     "No mod metadata found for project '$projectName'.\n\n" +
                     "Configure mindustryMod { } in your build.gradle.kts, " +
@@ -127,7 +131,7 @@ internal object JarTask {
 
         // Increment the build counter file after jar is built.
         task.doLast { _: Task ->
-            ext.incrementBuildCounter()
+            ArtifactNaming.incrementBuildCounter(counterFile)
         }
     }
 }

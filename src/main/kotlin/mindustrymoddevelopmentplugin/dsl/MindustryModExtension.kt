@@ -120,10 +120,8 @@ abstract class MindustryModExtension @Inject constructor(val project: Project) {
      * @return  the current count, or `0` if the file does not exist.
      */
     @Synchronized
-    fun readBuildCounter(): Int {
-        val file = project.file("build/buildCounter.txt")
-        return if (file.exists()) file.readText().trim().toIntOrNull() ?: 0 else 0
-    }
+    fun readBuildCounter(): Int =
+        ArtifactNaming.readBuildCounter(ArtifactNaming.buildCounterFile(project.projectDir))
 
     /**
      * Adds one to the counter and returns the new value.
@@ -136,26 +134,8 @@ abstract class MindustryModExtension @Inject constructor(val project: Project) {
      * [MindustryBuildConfig.format] when uniqueness matters more than a small number.
      */
     @Synchronized
-    fun incrementBuildCounter(): Int {
-        val file = project.file("build/buildCounter.txt")
-        file.parentFile.mkdirs()
-        java.io.RandomAccessFile(file, "rw").use { raf ->
-            raf.channel.use { channel ->
-                channel.lock().use {
-                    val bytes = ByteArray(raf.length().toInt())
-                    raf.seek(0)
-                    raf.readFully(bytes)
-                    val current = String(bytes).trim().toIntOrNull() ?: 0
-                    val next = current + 1
-                    raf.setLength(0)
-                    raf.seek(0)
-                    raf.write(next.toString().toByteArray())
-                    channel.force(true)
-                    return next
-                }
-            }
-        }
-    }
+    fun incrementBuildCounter(): Int =
+        ArtifactNaming.incrementBuildCounter(ArtifactNaming.buildCounterFile(project.projectDir))
 
     /**
      * Writes the build counter.

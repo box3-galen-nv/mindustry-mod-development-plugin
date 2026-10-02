@@ -95,7 +95,11 @@ internal object ModWiring {
         }
 
         project.tasks.named("jar", Jar::class.java) { task ->
-            JarTask.configure(task, names.jar, ext, hasModFile, project, generateMeta, modFileName)
+            JarTask.configure(
+                task, names.jar, ext, hasModFile, project, generateMeta, modFileName,
+                metaName = ext.modMeta.name,
+                counterFile = ArtifactNaming.buildCounterFile(project.projectDir),
+            )
         }
 
         project.tasks.register("jarAndroid") { task ->

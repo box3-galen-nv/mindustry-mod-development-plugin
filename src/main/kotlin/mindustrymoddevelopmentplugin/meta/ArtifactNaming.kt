@@ -76,4 +76,38 @@ internal object ArtifactNaming {
         }
         return ""
     }
+
+    /** The counter file a mod project keeps its `{build_count}` in. */
+    fun buildCounterFile(projectDir: File): File = File(projectDir, "build/buildCounter.txt")
+
+    /** Reads the counter in [file], or 0 when it does not exist yet. */
+    fun readBuildCounter(file: File): Int =
+        if (file.exists()) file.readText().trim().toIntOrNull() ?: 0 else 0
+
+    /**
+     * Adds one to the counter in [file] and returns the new value.
+     *
+     * The whole read-modify-write runs under an exclusive [java.nio.channels.FileLock], so two Gradle
+     * processes building the same project cannot lose an increment the way `write(read() + 1)` could.
+     *
+     * File-based on purpose: the `jar` task increments it from its action, and an action may not reach back
+     * into the extension (which owns a `Project`) if the configuration cache is to serialize the task.
+     */
+    fun incrementBuildCounter(file: File): Int {
+        file.parentFile.mkdirs()
+        java.io.RandomAccessFile(file, "rw").use { raf ->
+            raf.channel.use { channel ->
+                channel.lock().use {
+                    val bytes = ByteArray(raf.length().toInt())
+                    raf.seek(0)
+                    raf.readFully(bytes)
+                    val next = (String(bytes).trim().toIntOrNull() ?: 0) + 1
+                    raf.setLength(0)
+                    raf.seek(0)
+                    raf.write(next.toString().toByteArray())
+                    return next
+                }
+            }
+        }
+    }
 }
