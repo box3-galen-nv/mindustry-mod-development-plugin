@@ -73,7 +73,7 @@ internal class UpToDateIntegrationTest : TestKitFixture() {
     fun `buildModHJson is skipped when generateModMeta is false`() {
         write("settings.gradle.kts", """rootProject.name = "test"""")
         write("build.gradle.kts", """
-            ${pluginSnippet()}
+            ${pluginSnippet}
             ${kotlinSnippet()}
             mindustryModRoot { mindustryApiVersion = "159" }
             mindustryMod { modMeta { name = "test-mod"; java = true } }
@@ -91,7 +91,7 @@ internal class UpToDateIntegrationTest : TestKitFixture() {
         write("settings.gradle.kts", """rootProject.name = "test"""")
         val script = { version: String ->
             """
-            ${pluginSnippet()}
+            ${pluginSnippet}
             ${kotlinSnippet()}
             mindustryModRoot {
                 mindustryApiVersion = "159"

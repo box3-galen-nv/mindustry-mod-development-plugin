@@ -212,7 +212,7 @@ project/
 | `dependencies` | | 硬依赖 |
 | `softDependencies` | | 软依赖 |
 
-完整字段见 [`ModMeta.kt`](src/main/kotlin/com/example/mindustry/meta/ModMeta.kt)。
+完整字段见 [`ModMeta.kt`](src/main/kotlin/mindustrymoddevelopmentplugin/meta/ModMeta.kt)。
 
 > 已覆盖引擎 `Mods.ModMeta` 的全部 19 个字段；`internalName` 为派生字段（不是 `mod.hjson` 的键）。
 

@@ -14,7 +14,7 @@ internal class ClearModsIntegrationTest : TestKitFixture() {
     @Test
     fun `clearMods resolves the name from mod hjson and keeps other mods`() {
         // The name lives only in mod.hjson (no DSL name) — exactly the workflow back-fill supports
-        writeMultiProjectWithMod("""mindustryMod { modMeta { java = true } }""")
+        writeMultiProjectWithMod()
         write("sub/mod.hjson", "name: '''my-mod'''\nversion: '''1.0'''\n")
         val modsDir = rootDir.resolve("data/mods").also { it.mkdirs() }
         val ownStale = modsDir.resolve("[${MindustryRunConfig.DEFAULT_DEPLOY_TAG}]my-mod-0.9-Jar.jar").also { it.writeText("old") }
@@ -30,7 +30,7 @@ internal class ClearModsIntegrationTest : TestKitFixture() {
     @Test
     fun `clearMods keeps everything and warns when no name can be resolved`() {
         // No DSL name and no metadata file → the name cannot be resolved
-        writeMultiProjectWithMod("""mindustryMod { modMeta { java = true } }""")
+        writeMultiProjectWithMod()
         val modsDir = rootDir.resolve("data/mods").also { it.mkdirs() }
         val foreign = modsDir.resolve("[${MindustryRunConfig.DEFAULT_DEPLOY_TAG}]other-mod-1.0-Jar.jar").also { it.writeText("other") }
 
@@ -43,22 +43,22 @@ internal class ClearModsIntegrationTest : TestKitFixture() {
 
     // ---- clearMods safety: never delete when the name cannot be resolved ----
 
-    private fun writeMultiProjectWithMod(modBuildScript: String) {
+    private fun writeMultiProjectWithMod() {
         write("settings.gradle.kts", """
             rootProject.name = "test"
             include("sub")
         """)
         write("build.gradle.kts", """
-            ${pluginSnippet()}
+            ${pluginSnippet}
             mindustryModRoot {
                 mindustryApiVersion = "159"
                 run { gameDataDir = file("data") }
             }
         """)
         write("sub/build.gradle.kts", """
-            ${pluginSnippet()}
+            ${pluginSnippet}
             ${kotlinSnippet()}
-            $modBuildScript
+            mindustryMod { modMeta { java = true } }
         """)
     }
 }

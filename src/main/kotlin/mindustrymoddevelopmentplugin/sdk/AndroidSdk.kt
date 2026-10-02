@@ -157,7 +157,7 @@ internal object AndroidSdk {
         osName: String = System.getProperty("os.name"),
     ): List<String>? {
         if (configured != null && configured.isFile) return executableOrJar(configured)
-        onPath("d8", pathEnv, osName)?.let { return listOf(it.absolutePath) }
+        onPath(pathEnv, osName)?.let { return listOf(it.absolutePath) }
 
         val buildTools = sdkRoot?.let { File(it, "build-tools") }
             ?.listFiles()
@@ -197,13 +197,13 @@ internal object AndroidSdk {
     }
 
     /** First executable named [name] (plus the Windows launcher suffixes) in the `PATH`-style [pathEnv]. */
-    private fun onPath(name: String, pathEnv: String?, osName: String): File? {
+    private fun onPath(pathEnv: String?, osName: String): File? {
         if (pathEnv.isNullOrBlank()) return null
         val suffixes = if (osName.lowercase().contains("win")) listOf(".exe", ".bat", ".cmd", "") else listOf("")
         return pathEnv.split(File.pathSeparatorChar)
             .filter { it.isNotBlank() }
             .asSequence()
-            .flatMap { dir -> suffixes.asSequence().map { File(dir, name + it) } }
+            .flatMap { dir -> suffixes.asSequence().map { File(dir, "d8" + it) } }
             .firstOrNull { it.isFile }
     }
 

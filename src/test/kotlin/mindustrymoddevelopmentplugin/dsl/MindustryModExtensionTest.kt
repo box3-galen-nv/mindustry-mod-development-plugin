@@ -5,6 +5,8 @@ import java.io.File
 import mindustrymoddevelopmentplugin.meta.ModMeta
 import org.gradle.testfixtures.ProjectBuilder
 import org.junit.jupiter.api.Assertions.assertTrue
+import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Test
 
 class MindustryModExtensionTest {
@@ -119,14 +121,14 @@ class MindustryModExtensionTest {
 
     @Test
     fun `cleanDeployedFiles defaults to true`() {
-        assertTrue(runConfig().cleanDeployedFiles.get() == true)
+        assertTrue(runConfig().cleanDeployedFiles.get())
     }
 
     @Test
     fun `cleanDeployedFiles can be set to false`() {
         val config = runConfig()
         config.cleanDeployedFiles.set(false)
-        assertTrue(config.cleanDeployedFiles.get() == false)
+        assertFalse(config.cleanDeployedFiles.get())
     }
     // ---- useDeployRun (run sub-config) ----
 
@@ -134,14 +136,14 @@ class MindustryModExtensionTest {
     fun `useDeployRun defaults to true`() {
         val project = ProjectBuilder.builder().build()
         val config = project.objects.newInstance(MindustryRunConfig::class.java)
-        assertTrue(config.useDeployRun.get() == true)
+        assertTrue(config.useDeployRun.get())
     }
     @Test
     fun `useDeployRun can be set to false`() {
         val project = ProjectBuilder.builder().build()
         val config = project.objects.newInstance(MindustryRunConfig::class.java)
         config.useDeployRun.set(false)
-        assertTrue(config.useDeployRun.get() == false)
+        assertFalse(config.useDeployRun.get())
     }
     // ---- maxLogFiles (debug sub-config) ----
 
@@ -150,7 +152,7 @@ class MindustryModExtensionTest {
         val project = ProjectBuilder.builder().build()
         val config = project.objects.newInstance(MindustryDebugConfig::class.java)
         assertTrue(config.maxLogFiles.get() == 25)
-        assertTrue(MindustryDebugConfig.DEFAULT_MAX_LOG_FILES == 25)
+        assertEquals(25, MindustryDebugConfig.DEFAULT_MAX_LOG_FILES)
     }
     @Test
     fun `maxLogFiles can be customized`() {
@@ -165,7 +167,7 @@ class MindustryModExtensionTest {
     fun `enableRunLogging defaults to true`() {
         val project = ProjectBuilder.builder().build()
         val config = project.objects.newInstance(MindustryDebugConfig::class.java)
-        assertTrue(config.enableRunLogging.get() == true)
+        assertTrue(config.enableRunLogging.get())
         assertTrue(MindustryDebugConfig.DEFAULT_ENABLE_RUN_LOGGING)
     }
     @Test
@@ -173,7 +175,7 @@ class MindustryModExtensionTest {
         val project = ProjectBuilder.builder().build()
         val config = project.objects.newInstance(MindustryDebugConfig::class.java)
         config.enableRunLogging.set(false)
-        assertTrue(config.enableRunLogging.get() == false)
+        assertFalse(config.enableRunLogging.get())
     }
     // ---- debugging switches (debug sub-config) ----
 
@@ -236,7 +238,7 @@ class MindustryModExtensionTest {
     fun `d8TimeoutMinutes defaults to 30 minutes`() {
         val project = ProjectBuilder.builder().build()
         val config = project.objects.newInstance(MindustryBuildConfig::class.java)
-        assertTrue(MindustryBuildConfig.DEFAULT_D8_TIMEOUT_MINUTES == 30L)
+        assertEquals(30L, MindustryBuildConfig.DEFAULT_D8_TIMEOUT_MINUTES)
         assertTrue(config.d8TimeoutMinutes.get() == 30L, "got ${config.d8TimeoutMinutes.get()}")
     }
     @Test
@@ -253,8 +255,8 @@ class MindustryModExtensionTest {
     fun `androidSdkAutoDownload defaults to false`() {
         val project = ProjectBuilder.builder().build()
         val config = project.objects.newInstance(MindustryDownloadConfig::class.java)
-        assertTrue(MindustryDownloadConfig.DEFAULT_ANDROID_SDK_AUTO_DOWNLOAD == false)
-        assertTrue(config.androidSdkAutoDownload.get() == false, "got ${config.androidSdkAutoDownload.get()}")
+        assertFalse(MindustryDownloadConfig.DEFAULT_ANDROID_SDK_AUTO_DOWNLOAD)
+        assertFalse(config.androidSdkAutoDownload.get(), "got ${config.androidSdkAutoDownload.get()}")
     }
     @Test
     fun `androidSdkAutoDownload can be enabled`() {
@@ -369,8 +371,8 @@ class MindustryModExtensionTest {
     fun `useHJson defaults to false`() {
         val project = ProjectBuilder.builder().build()
         val config = project.objects.newInstance(MindustryBuildConfig::class.java)
-        assertTrue(MindustryBuildConfig.DEFAULT_USE_HJSON == false)
-        assertTrue(config.useHJson.get() == false, "got ${config.useHJson.get()}")
+        assertFalse(MindustryBuildConfig.DEFAULT_USE_HJSON)
+        assertFalse(config.useHJson.get(), "got ${config.useHJson.get()}")
     }
     @Test
     fun `useHJson can be enabled`() {

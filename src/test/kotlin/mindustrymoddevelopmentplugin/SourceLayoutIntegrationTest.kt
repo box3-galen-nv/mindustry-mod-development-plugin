@@ -17,7 +17,7 @@ internal class SourceLayoutIntegrationTest : TestKitFixture() {
     fun `kotlin sources compile from the project root`() {
         write("settings.gradle.kts", """rootProject.name = "test"""")
         write("build.gradle.kts", """
-            ${pluginSnippet()}
+            ${pluginSnippet}
             ${kotlinSnippet()}
             mindustryModRoot {
                 mindustryApiVersion = "159"
@@ -41,7 +41,7 @@ internal class SourceLayoutIntegrationTest : TestKitFixture() {
         // compiled as well — a duplicate of a root source failed the build.
         write("settings.gradle.kts", """rootProject.name = "test"""")
         write("build.gradle.kts", """
-            ${pluginSnippet()}
+            ${pluginSnippet}
             ${kotlinSnippet()}
             mindustryModRoot {
                 mindustryApiVersion = "159"
@@ -67,7 +67,7 @@ internal class SourceLayoutIntegrationTest : TestKitFixture() {
         // the same file twice (which would fail as a duplicate declaration).
         write("settings.gradle.kts", """rootProject.name = "test"""")
         write("build.gradle.kts", """
-            ${pluginSnippet()}
+            ${pluginSnippet}
             ${kotlinSnippet()}
             mindustryModRoot {
                 mindustryApiVersion = "159"
@@ -91,7 +91,7 @@ internal class SourceLayoutIntegrationTest : TestKitFixture() {
         // README promised Kotlin/Java, but only **/*.kt was ever compiled.
         write("settings.gradle.kts", """rootProject.name = "test"""")
         write("build.gradle.kts", """
-            ${pluginSnippet()}
+            ${pluginSnippet}
             ${kotlinSnippet()}
             mindustryModRoot {
                 mindustryApiVersion = "159"
@@ -116,7 +116,7 @@ internal class SourceLayoutIntegrationTest : TestKitFixture() {
         write("settings.gradle.kts", """rootProject.name = "test"""")
         write("mod.hjson", """name: '''test-mod'""""")
         write("build.gradle.kts", """
-            ${pluginSnippet()}
+            ${pluginSnippet}
             ${kotlinSnippet()}
             mindustryMod { modMeta { name = "test-mod"; version = "1.0"; java = true } }
         """)

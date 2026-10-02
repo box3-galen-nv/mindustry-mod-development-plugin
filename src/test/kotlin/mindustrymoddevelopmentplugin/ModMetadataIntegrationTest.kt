@@ -24,7 +24,7 @@ internal class ModMetadataIntegrationTest : TestKitFixture() {
             dependencies: ['dep-a']
         """)
         write("build.gradle.kts", """
-            ${pluginSnippet()}
+            ${pluginSnippet}
             ${kotlinSnippet()}
             mindustryModRoot {
                 mindustryApiVersion = "159"
@@ -66,7 +66,7 @@ internal class ModMetadataIntegrationTest : TestKitFixture() {
             }
         """)
         write("build.gradle.kts", """
-            ${pluginSnippet()}
+            ${pluginSnippet}
             ${kotlinSnippet()}
             mindustryModRoot {
                 mindustryApiVersion = "159"
@@ -95,7 +95,7 @@ internal class ModMetadataIntegrationTest : TestKitFixture() {
         write("plugin.hjson", """name: '''plugin-mod'''""")
         // No modMeta DSL at all: relies entirely on the name in plugin.hjson
         write("build.gradle.kts", """
-            ${pluginSnippet()}
+            ${pluginSnippet}
             ${kotlinSnippet()}
             mindustryModRoot { mindustryApiVersion = "159" }
         """)
@@ -113,7 +113,7 @@ internal class ModMetadataIntegrationTest : TestKitFixture() {
         write("mod.json", """{ "name": "from-json", "author": "json-author" }""")
         write("mod.hjson", "name: '''from-hjson'''\nauthor: '''hjson-author'''\n")
         write("build.gradle.kts", """
-            ${pluginSnippet()}
+            ${pluginSnippet}
             ${kotlinSnippet()}
             mindustryModRoot {
                 mindustryApiVersion = "159"
@@ -137,7 +137,7 @@ internal class ModMetadataIntegrationTest : TestKitFixture() {
     fun `modMeta can be configured as a top-level block`() {
         write("settings.gradle.kts", """rootProject.name = "test"""")
         write("build.gradle.kts", """
-            ${pluginSnippet()}
+            ${pluginSnippet}
             ${kotlinSnippet()}
             mindustryModRoot {
                 mindustryApiVersion = "159"
@@ -162,7 +162,7 @@ internal class ModMetadataIntegrationTest : TestKitFixture() {
     fun `buildModHJson writes mod json by default`() {
         write("settings.gradle.kts", """rootProject.name = "test"""")
         write("build.gradle.kts", """
-            ${pluginSnippet()}
+            ${pluginSnippet}
             ${kotlinSnippet()}
             mindustryModRoot { mindustryApiVersion = "159" }
             mindustryMod {

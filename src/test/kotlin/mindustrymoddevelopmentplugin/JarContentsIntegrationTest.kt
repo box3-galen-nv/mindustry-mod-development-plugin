@@ -68,7 +68,7 @@ internal class JarContentsIntegrationTest : TestKitFixture() {
         write("settings.gradle.kts", """rootProject.name = "test"""")
         write("mod.json", """{ "name": "json-mod", "version": "1.0", "java": true }""")
         write("build.gradle.kts", """
-            ${pluginSnippet()}
+            ${pluginSnippet}
             ${kotlinSnippet()}
             mindustryModRoot { mindustryApiVersion = "159" }
             mindustryMod { modMeta { name = "json-mod"; version = "1.0"; java = true } }
@@ -89,7 +89,7 @@ internal class JarContentsIntegrationTest : TestKitFixture() {
         */
         write("settings.gradle.kts", """rootProject.name = "test"""")
         write("build.gradle.kts", """
-            ${pluginSnippet()}
+            ${pluginSnippet}
             mindustryModRoot {
                 mindustryApiVersion = "159"
                 build { format = "{name}-{version}" }
@@ -127,7 +127,7 @@ internal class JarContentsIntegrationTest : TestKitFixture() {
     // ---- Icon renaming + warning ----
 
     private fun iconBuildScript(iconFile: String) = """
-        ${pluginSnippet()}
+        ${pluginSnippet}
         ${kotlinSnippet()}
         mindustryModRoot { mindustryApiVersion = "159" }
         mindustryMod {

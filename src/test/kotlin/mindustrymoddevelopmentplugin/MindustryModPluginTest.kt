@@ -69,10 +69,6 @@ class MindustryModPluginTest {
     @Test
     fun `mod sources never include build caches or a project-local gradle home`() {
         val projectDir = File("/work/mod")
-        // The modSourceExcludes function is a member of the plugin class, so ask an applied plugin for it.
-        val pluginProject = ProjectBuilder.builder().build()
-        pluginProject.plugins.apply(MindustryModPlugin::class.java)
-        val plugin = pluginProject.plugins.findPlugin(MindustryModPlugin::class.java)!!
 
         assertEquals(
             listOf("build/**", ".gradle/**", "**/*.kts", "**/caches/**", "data/**"),

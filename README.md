@@ -233,7 +233,7 @@ configures the same object.
 | `dependencies` | | Hard dependency names — `dependencies += "lib"` or `dependencies = listOf("a", "b")` |
 | `softDependencies` | | Optional dependency names (same syntax) |
 
-Full list in [`ModMeta.kt`](src/main/kotlin/com/example/mindustry/meta/ModMeta.kt).
+Full list in [`ModMeta.kt`](src/main/kotlin/mindustrymoddevelopmentplugin/meta/ModMeta.kt).
 
 > All 19 fields of the engine's `Mods.ModMeta` are covered; `internalName` is derived (it is not a `mod.hjson` key).
 

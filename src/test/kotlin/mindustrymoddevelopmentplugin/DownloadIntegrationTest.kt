@@ -19,7 +19,7 @@ internal class DownloadIntegrationTest : TestKitFixture() {
         // the regression test for `runMindustry` deploying nothing at all in that setup.
         write("settings.gradle.kts", """rootProject.name = "test"""")
         write("build.gradle.kts", """
-            ${pluginSnippet()}
+            ${pluginSnippet}
             mindustryModRoot {
                 mindustryApiVersion = "159"
                 // Pinned: the default format carries {build_count}, so two separate Gradle invocations
@@ -98,7 +98,7 @@ internal class DownloadIntegrationTest : TestKitFixture() {
         fun writeFixture(version: String) {
             write("settings.gradle.kts", """rootProject.name = "test"""")
             write("build.gradle.kts", """
-                ${pluginSnippet()}
+                ${pluginSnippet}
                 mindustryModRoot {
                     mindustryApiVersion = "159"
                     download {

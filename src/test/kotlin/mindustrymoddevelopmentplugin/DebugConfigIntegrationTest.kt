@@ -16,7 +16,7 @@ internal class DebugConfigIntegrationTest : TestKitFixture() {
         fun runMindustryDryRun(vararg args: String): String {
             write("settings.gradle.kts", """rootProject.name = "test"""")
             write("build.gradle.kts", """
-                ${pluginSnippet()}
+                ${pluginSnippet}
                 ${kotlinSnippet()}
                 mindustryModRoot { mindustryApiVersion = "159" }
                 modMeta { name = "test-mod"; version = "1.0"; java = true }
@@ -41,7 +41,7 @@ internal class DebugConfigIntegrationTest : TestKitFixture() {
         fun dryRun(vararg args: String): String {
             write("settings.gradle.kts", """rootProject.name = "test"""")
             write("build.gradle.kts", """
-                ${pluginSnippet()}
+                ${pluginSnippet}
                 ${kotlinSnippet()}
                 mindustryModRoot {
                     mindustryApiVersion = "159"
@@ -67,7 +67,7 @@ internal class DebugConfigIntegrationTest : TestKitFixture() {
         write("gradle.properties", "mindustryDebug=true\n")
         write("settings.gradle.kts", """rootProject.name = "test"""")
         write("build.gradle.kts", """
-            ${pluginSnippet()}
+            ${pluginSnippet}
             ${kotlinSnippet()}
             mindustryModRoot { mindustryApiVersion = "159" }
             modMeta { name = "test-mod"; version = "1.0"; java = true }

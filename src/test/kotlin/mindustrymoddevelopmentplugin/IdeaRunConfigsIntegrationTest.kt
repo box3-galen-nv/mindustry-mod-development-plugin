@@ -14,7 +14,7 @@ internal class IdeaRunConfigsIntegrationTest : TestKitFixture() {
     fun `the generate task writes run configurations from the DSL port and is up to date after`() {
         write("settings.gradle.kts", """rootProject.name = "test"""")
         write("build.gradle.kts", """
-            ${pluginSnippet()}
+            ${pluginSnippet}
             ${kotlinSnippet()}
             mindustryModRoot {
                 mindustryApiVersion = "159"
@@ -49,7 +49,7 @@ internal class IdeaRunConfigsIntegrationTest : TestKitFixture() {
     fun `the generate task depends on nothing`() {
         write("settings.gradle.kts", """rootProject.name = "test"""")
         write("build.gradle.kts", """
-            ${pluginSnippet()}
+            ${pluginSnippet}
             ${kotlinSnippet()}
             mindustryModRoot { mindustryApiVersion = "159" }
             modMeta { name = "test-mod"; version = "1.0"; java = true }
@@ -73,7 +73,7 @@ internal class IdeaRunConfigsIntegrationTest : TestKitFixture() {
         write(".run/Mindustry-attach-debugger.run.xml", "<component name=\"mine\" />\n")
         write("settings.gradle.kts", """rootProject.name = "test"""")
         write("build.gradle.kts", """
-            ${pluginSnippet()}
+            ${pluginSnippet}
             ${kotlinSnippet()}
             mindustryModRoot { mindustryApiVersion = "159" }
             modMeta { name = "test-mod"; version = "1.0"; java = true }
@@ -103,14 +103,14 @@ internal class IdeaRunConfigsIntegrationTest : TestKitFixture() {
             include("sub")
         """)
         write("build.gradle.kts", """
-            ${pluginSnippet()}
+            ${pluginSnippet}
             mindustryModRoot {
                 mindustryApiVersion = "159"
                 debug { debugPort = 5012 }
             }
         """)
         write("sub/build.gradle.kts", """
-            ${pluginSnippet()}
+            ${pluginSnippet}
             ${kotlinSnippet()}
             modMeta { name = "sub-mod"; version = "1.0"; java = true }
         """)

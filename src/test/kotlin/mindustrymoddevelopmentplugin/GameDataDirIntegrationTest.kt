@@ -86,7 +86,7 @@ internal class GameDataDirIntegrationTest : TestKitFixture() {
         // No shorthand anymore: a shared project-local directory is set per project, which is what a
         // real multi-project build does with an `allprojects { }` (or `subprojects { }`) block.
         write("build.gradle.kts", """
-            ${pluginSnippet()}
+            ${pluginSnippet}
             mindustryModRoot {
                 mindustryApiVersion = "159"
                 download {
@@ -100,7 +100,7 @@ internal class GameDataDirIntegrationTest : TestKitFixture() {
             }
         """)
         write("sub/build.gradle.kts", """
-            ${pluginSnippet()}
+            ${pluginSnippet}
             mindustryModRoot {
                 run { gameDataDir = rootProject.layout.projectDirectory.dir("data").asFile }
             }

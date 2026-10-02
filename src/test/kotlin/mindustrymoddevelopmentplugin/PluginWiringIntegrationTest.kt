@@ -18,13 +18,13 @@ internal class PluginWiringIntegrationTest : TestKitFixture() {
     @Test
     fun `the game API coordinate resolves without any repository declared`() {
         /*
-        The pluginSnippet() fixture declares no repositories on purpose. Corrupting the asset name inside
+        The pluginSnippet fixture declares no repositories on purpose. Corrupting the asset name inside
         MindustryApi makes the compiling fixtures fail, so the whole suite exercises the route; this
         case pins the coordinate the compile classpath asks for.
         */
         write("settings.gradle.kts", """rootProject.name = "test"""")
         write("build.gradle.kts", """
-            ${pluginSnippet()}
+            ${pluginSnippet}
             ${kotlinSnippet()}
             mindustryModRoot { mindustryApiVersion = "159" }
             modMeta { name = "test-mod"; version = "1.0"; java = true }
@@ -49,7 +49,7 @@ internal class PluginWiringIntegrationTest : TestKitFixture() {
     fun `single project mode creates jar deploy and buildModHJson tasks`() {
         write("settings.gradle.kts", """rootProject.name = "test"""")
         write("build.gradle.kts", """
-            ${pluginSnippet()}
+            ${pluginSnippet}
             ${kotlinSnippet()}
             mindustryModRoot { mindustryApiVersion = "159" }
             mindustryMod { modMeta { name = "test-mod"; version = "1.0"; java = true } }
@@ -67,7 +67,7 @@ internal class PluginWiringIntegrationTest : TestKitFixture() {
     fun `root project creates downloadMindustry and runMindustry tasks`() {
         write("settings.gradle.kts", """rootProject.name = "test"""")
         write("build.gradle.kts", """
-            ${pluginSnippet()}
+            ${pluginSnippet}
             mindustryModRoot { mindustryApiVersion = "159" }
         """)
         val result = tasksResult()
@@ -84,9 +84,9 @@ internal class PluginWiringIntegrationTest : TestKitFixture() {
             rootProject.name = "test"
             include("sub")
         """)
-        write("build.gradle.kts", "${pluginSnippet()}")
+        write("build.gradle.kts", "${pluginSnippet}")
         write("sub/build.gradle.kts", """
-            ${pluginSnippet()}
+            ${pluginSnippet}
             ${kotlinSnippet()}
             mindustryMod { modMeta { name = "sub-mod"; version = "1.0"; java = true } }
         """)
@@ -108,11 +108,11 @@ internal class PluginWiringIntegrationTest : TestKitFixture() {
             include("sub")
         """)
         write("build.gradle.kts", """
-            ${pluginSnippet()}
+            ${pluginSnippet}
             mindustryModRoot { mindustryApiVersion = "159" }
         """)
         write("sub/build.gradle.kts", """
-            ${pluginSnippet()}
+            ${pluginSnippet}
             ${kotlinSnippet()}
             modMeta { name = "sub-mod"; version = "3.0"; java = true }
             mindustryMod { generateModMeta = true }
@@ -130,11 +130,11 @@ internal class PluginWiringIntegrationTest : TestKitFixture() {
             include("sub")
         """)
         write("build.gradle.kts", """
-            ${pluginSnippet()}
+            ${pluginSnippet}
             mindustryModRoot { mindustryApiVersion = "159" }
         """)
         write("sub/build.gradle.kts", """
-            ${pluginSnippet()}
+            ${pluginSnippet}
             ${kotlinSnippet()}
             mindustryMod { modMeta { name = "sub-mod"; version = "1.0"; java = true } }
         """)
@@ -153,9 +153,9 @@ internal class PluginWiringIntegrationTest : TestKitFixture() {
             rootProject.name = "test"
             include("sub")
         """)
-        write("build.gradle.kts", "${pluginSnippet()}")
+        write("build.gradle.kts", "${pluginSnippet}")
         write("sub/build.gradle.kts", """
-            ${pluginSnippet()}
+            ${pluginSnippet}
             ${kotlinSnippet()}
             mindustryMod { modMeta { java = true } }
         """)
@@ -170,7 +170,7 @@ internal class PluginWiringIntegrationTest : TestKitFixture() {
     fun `java only mod has no kotlin plugin and still builds`() {
         write("settings.gradle.kts", """rootProject.name = "test"""")
         write("build.gradle.kts", """
-            ${pluginSnippet()}
+            ${pluginSnippet}
             mindustryModRoot {
                 mindustryApiVersion = "159"
                 // Pin the artifact name so jarEntryNames() finds a stable file.
@@ -194,7 +194,7 @@ internal class PluginWiringIntegrationTest : TestKitFixture() {
     fun `kotlin sources without the kotlin plugin fail with a helpful error`() {
         write("settings.gradle.kts", """rootProject.name = "test"""")
         write("build.gradle.kts", """
-            ${pluginSnippet()}
+            ${pluginSnippet}
             mindustryModRoot { mindustryApiVersion = "159" }
             modMeta { name = "test-mod"; version = "1.0"; java = true }
         """)
@@ -218,13 +218,13 @@ internal class PluginWiringIntegrationTest : TestKitFixture() {
         write("settings.gradle.kts", """rootProject.name = "test"
             include("sub")""")
         write("build.gradle.kts", """
-            ${pluginSnippet()}
+            ${pluginSnippet}
             mindustryModRoot { mindustryApiVersion = "159" }
             modMeta { name = "root-mod"; version = "1.0"; java = true }
         """)
         write("RootCls.java", "package rootonly;\npublic class RootCls {}\n")
         write("sub/build.gradle.kts", """
-            ${pluginSnippet()}
+            ${pluginSnippet}
             modMeta { name = "sub-mod"; version = "1.0"; java = true }
         """)
         write("sub/SubCls.java", "package subonly;\npublic class SubCls {}\n")
@@ -245,11 +245,11 @@ internal class PluginWiringIntegrationTest : TestKitFixture() {
         write("settings.gradle.kts", """rootProject.name = "test"
             include("sub")""")
         write("build.gradle.kts", """
-            ${pluginSnippet()}
+            ${pluginSnippet}
             mindustryModRoot { mindustryApiVersion = "159" }
         """)
         write("sub/build.gradle.kts", """
-            ${pluginSnippet()}
+            ${pluginSnippet}
             mindustryModRoot {
                 mindustryApiVersion = "147"
                 build { jarSuffix = "-Desk" }
@@ -273,9 +273,9 @@ internal class PluginWiringIntegrationTest : TestKitFixture() {
     fun `a subproject's own deploy task is left alone instead of breaking clearMods`() {
         write("settings.gradle.kts", """rootProject.name = "test"
             include("sub")""")
-        write("build.gradle.kts", pluginSnippet())
+        write("build.gradle.kts", pluginSnippet)
         write("sub/build.gradle.kts", """
-            ${pluginSnippet()}
+            ${pluginSnippet}
             // A deployment of its own, say to a server — not the mod packaging task.
             tasks.register("deploy") { doLast { println("own deploy") } }
             modMeta { name = "sub-mod"; version = "1.0"; java = true }

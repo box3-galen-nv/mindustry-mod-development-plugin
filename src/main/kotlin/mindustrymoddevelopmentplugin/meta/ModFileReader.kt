@@ -26,7 +26,7 @@ internal object ModFileReader {
 
     /** Metadata files present in [projectDir], in [FILE_NAMES] order. */
     fun existingFiles(projectDir: File): List<File> =
-        FILE_NAMES.map { File(projectDir, it) }.filter { it.isFile }
+        FILE_NAMES.map { File(projectDir, it) }.filter(File::isFile)
 
     /**
      * Value start index for [key], or null when the key is absent.
@@ -137,13 +137,13 @@ internal object ModFileReader {
                     metadata back-fill.
                     */
                     val next = t[i + 1]
-                    when {
-                        next == 'n' -> body.append('\n')
-                        next == 'r' -> body.append('\r')
-                        next == 't' -> body.append('\t')
-                        next == 'b' -> body.append('\b')
-                        next == 'f' -> body.append('\u000C')
-                        next == 'u' && i + 5 < t.length -> {
+                    when (next) {
+                        'n' -> body.append('\n')
+                        'r' -> body.append('\r')
+                        't' -> body.append('\t')
+                        'b' -> body.append('\b')
+                        'f' -> body.append('\u000C')
+                        'u' if i + 5 < t.length -> {
                             val code = t.substring(i + 2, i + 6).toIntOrNull(16)
                             if (code == null) {
                                 body.append(next)
@@ -202,7 +202,7 @@ internal object ModFileReader {
             i++
         }
         elements += current.toString()
-        return elements.map(::parseScalar).filterNotNull().filter { it.isNotEmpty() }
+        return elements.mapNotNull(::parseScalar).filter { it.isNotEmpty() }
     }
 
     /** String field; null when absent, `""` when empty. */

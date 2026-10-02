@@ -12,7 +12,7 @@ internal class RunTaskIntegrationTest : TestKitFixture() {
 
     @Test
     fun `runMindustry does not build the mods by itself`() {
-        writeMultiProjectFixture("")
+        writeMultiProjectFixture()
 
         // The leading colon matters: a bare `runMindustry` also matches the subproject's own run task.
         val result = runner().withArguments(":runMindustry", "--dry-run").build()
@@ -25,10 +25,10 @@ internal class RunTaskIntegrationTest : TestKitFixture() {
 
     @Test
     fun `a build script can wire packaging back in`() {
-        writeMultiProjectFixture("")
+        writeMultiProjectFixture()
         // The documented escape hatch: whoever wants the coupling writes it.
         write("build.gradle.kts", """
-            ${pluginSnippet()}
+            ${pluginSnippet}
             mindustryModRoot {
                 mindustryApiVersion = "159"
                 run { gameDataDir = file("data") }
@@ -52,21 +52,20 @@ internal class RunTaskIntegrationTest : TestKitFixture() {
         assertTrue(result.output.contains("runMindustry"))
     }
 
-    private fun writeMultiProjectFixture(rootRun: String) {
+    private fun writeMultiProjectFixture() {
         write("settings.gradle.kts", """rootProject.name = "test"
             include("sub")""")
         write("build.gradle.kts", """
-            ${pluginSnippet()}
+            ${pluginSnippet}
             mindustryModRoot {
                 mindustryApiVersion = "159"
                 run {
                     gameDataDir = file("data")
-                    $rootRun
                 }
             }
         """)
         write("sub/build.gradle.kts", """
-            ${pluginSnippet()}
+            ${pluginSnippet}
             mindustryMod { modMeta { name = "sub-mod"; version = "1.0"; java = true } }
         """)
     }

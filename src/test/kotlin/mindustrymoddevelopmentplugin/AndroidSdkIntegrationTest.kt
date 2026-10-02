@@ -42,7 +42,7 @@ internal class AndroidSdkIntegrationTest : TestKitFixture() {
     fun `build androidSdkDir configures jarAndroid without error`() {
         write("settings.gradle.kts", """rootProject.name = "test"""")
         write("build.gradle.kts", """
-            ${pluginSnippet()}
+            ${pluginSnippet}
             ${kotlinSnippet()}
             mindustryModRoot {
                 mindustryApiVersion = "159"
@@ -59,7 +59,7 @@ internal class AndroidSdkIntegrationTest : TestKitFixture() {
     fun `build d8Args configures jarAndroid without error`() {
         write("settings.gradle.kts", """rootProject.name = "test"""")
         write("build.gradle.kts", """
-            ${pluginSnippet()}
+            ${pluginSnippet}
             ${kotlinSnippet()}
             mindustryModRoot {
                 mindustryApiVersion = "159"
@@ -77,7 +77,7 @@ internal class AndroidSdkIntegrationTest : TestKitFixture() {
     fun `build d8TimeoutMinutes configures jarAndroid without error`() {
         write("settings.gradle.kts", """rootProject.name = "test"""")
         write("build.gradle.kts", """
-            ${pluginSnippet()}
+            ${pluginSnippet}
             ${kotlinSnippet()}
             mindustryModRoot {
                 mindustryApiVersion = "159"
@@ -100,7 +100,7 @@ internal class AndroidSdkIntegrationTest : TestKitFixture() {
         val toolsUrl = fakeCommandLineToolsArchive()
         write("settings.gradle.kts", """rootProject.name = "test"""")
         write("build.gradle.kts", """
-            ${pluginSnippet()}
+            ${pluginSnippet}
             ${kotlinSnippet()}
             mindustryModRoot {
                 mindustryApiVersion = "159"
@@ -140,7 +140,7 @@ internal class AndroidSdkIntegrationTest : TestKitFixture() {
         val toolsUrl = fakeCommandLineToolsArchive()
         write("settings.gradle.kts", """rootProject.name = "test"""")
         write("build.gradle.kts", """
-            ${pluginSnippet()}
+            ${pluginSnippet}
             ${kotlinSnippet()}
             mindustryModRoot {
                 mindustryApiVersion = "159"
@@ -181,7 +181,7 @@ internal class AndroidSdkIntegrationTest : TestKitFixture() {
     fun `auto download can be turned off and the old failure comes back`() {
         write("settings.gradle.kts", """rootProject.name = "test"""")
         write("build.gradle.kts", """
-            ${pluginSnippet()}
+            ${pluginSnippet}
             ${kotlinSnippet()}
             mindustryModRoot {
                 mindustryApiVersion = "159"
@@ -243,7 +243,7 @@ internal class AndroidSdkIntegrationTest : TestKitFixture() {
         val d8 = fakeD8Script()
         write("settings.gradle.kts", """rootProject.name = "test"""")
         write("build.gradle.kts", """
-            ${pluginSnippet()}
+            ${pluginSnippet}
             ${kotlinSnippet()}
             mindustryModRoot {
                 mindustryApiVersion = "159"

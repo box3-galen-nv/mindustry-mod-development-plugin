@@ -36,7 +36,7 @@ internal abstract class TestKitFixture {
     ) {
         write("settings.gradle.kts", """rootProject.name = "test"""")
         write("build.gradle.kts", """
-            ${pluginSnippet()}
+            ${pluginSnippet}
             mindustryModRoot {
                 mindustryApiVersion = "159"
                 download {
@@ -85,7 +85,7 @@ internal abstract class TestKitFixture {
      * the proof. A Java-only mod therefore builds with an empty `repositories { }`.
      */
 
-    protected fun pluginSnippet() = """plugins { id("io.github.box3-galen-nv.mindustry-mod-development-plugin") }"""
+    protected val pluginSnippet = """plugins { id("io.github.box3-galen-nv.mindustry-mod-development-plugin") }"""
 
     /**
      * Apply Kotlin plugin via `buildscript` + `apply` instead of `plugins` block,
@@ -147,7 +147,7 @@ internal abstract class TestKitFixture {
 
 
     protected fun androidBuildScript(extraBuild: String = "") = """
-        ${pluginSnippet()}
+        ${pluginSnippet}
         ${kotlinSnippet()}
         mindustryModRoot {
             mindustryApiVersion = "159"
@@ -170,7 +170,7 @@ internal abstract class TestKitFixture {
      */
 
     protected fun downloadAndRunScript(download: String = "", run: String = "", debug: String = "") = """
-        ${pluginSnippet()}
+        ${pluginSnippet}
         mindustryModRoot {
             mindustryApiVersion = "159"
             download {
