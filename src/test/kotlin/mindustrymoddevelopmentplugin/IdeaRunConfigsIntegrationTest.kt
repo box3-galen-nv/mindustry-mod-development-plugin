@@ -68,7 +68,7 @@ internal class IdeaRunConfigsIntegrationTest : TestKitFixture() {
 
     @Test
     fun `the task can be switched off the Gradle way`() {
-        // There is no DSL flag any more: the task only runs when it is asked for, and a project that
+        // There is no DSL flag anymore: the task only runs when it is asked for, and a project that
         // never wants it disables it like any other Gradle task.
         write(".run/Mindustry-attach-debugger.run.xml", "<component name=\"mine\" />\n")
         write("settings.gradle.kts", """rootProject.name = "test"""")

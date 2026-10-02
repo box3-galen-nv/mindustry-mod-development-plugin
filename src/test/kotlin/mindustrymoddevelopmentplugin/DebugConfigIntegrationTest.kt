@@ -62,7 +62,7 @@ internal class DebugConfigIntegrationTest : TestKitFixture() {
 
     @Test
     fun `gradle properties can make a debug run the default`() {
-        // There is no DSL switch any more, so this is how a project asks for debugging on every run
+        // There is no DSL switch anymore, so this is how a project asks for debugging on every run
         // it starts locally — the same property, just persisted instead of passed per invocation.
         write("gradle.properties", "mindustryDebug=true\n")
         write("settings.gradle.kts", """rootProject.name = "test"""")

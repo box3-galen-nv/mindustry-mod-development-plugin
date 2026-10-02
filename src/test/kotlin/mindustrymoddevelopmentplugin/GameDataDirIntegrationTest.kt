@@ -19,7 +19,7 @@ internal class GameDataDirIntegrationTest : TestKitFixture() {
 
         assertTrue(result.task(":clearMods")?.outcome == TaskOutcome.SUCCESS, result.output)
         assertTrue(rootDir.resolve("data/mods").isDirectory, "the game's mods path follows the data dir")
-        assertTrue(!rootDir.resolve("mods").exists(), "the old default must not be used any more")
+        assertTrue(!rootDir.resolve("mods").exists(), "the old default must not be used anymore")
     }
 
 
@@ -83,7 +83,7 @@ internal class GameDataDirIntegrationTest : TestKitFixture() {
     fun `a subproject shares the root data dir`() {
         write("settings.gradle.kts", """rootProject.name = "test"
             include("sub")""")
-        // No shorthand any more: a shared project-local directory is set per project, which is what a
+        // No shorthand anymore: a shared project-local directory is set per project, which is what a
         // real multi-project build does with an `allprojects { }` (or `subprojects { }`) block.
         write("build.gradle.kts", """
             ${pluginSnippet()}

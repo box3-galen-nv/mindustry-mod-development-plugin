@@ -41,9 +41,7 @@ internal abstract class TestKitFixture {
                 mindustryApiVersion = "159"
                 download {
                     mindustryDownloadVersion = "$version"
-                    // No test may reach the network: see offlineGameJar.
-                    mindustryDownloadUrl = "file:///nonexistent/mindustry-releases"
-                    // No test may reach the network: see offlineGameJar.
+                    // No test may reach the network for the game itself.
                     mindustryDownloadUrl = "file:///nonexistent/mindustry-releases"
                 }
                 run {
