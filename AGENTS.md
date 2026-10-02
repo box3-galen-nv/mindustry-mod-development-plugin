@@ -119,9 +119,14 @@ tasks/                  one internal object per task: <Name>Task.configure(...);
   `os.name` says "Linux" there and the desktop path is wrong. On the APK both `MINDUSTRY_DATA_DIR` and
   `-Dmindustry.data.dir` are dead, so the warning must say that instead of suggesting them. Android gets no
   `.run/*.xml` and exactly one lifecycle hint, never an edit to the user's build settings.
-- **`runMindustry` on Android is not implemented**: it refuses to launch the desktop jar (Arc ships no
-  aarch64 Linux SDL backend) and the headless-server route is designed but absent. Do not document it as
-  working.
+- **On Android `runMindustry` stages instead of launching**: it copies the artifacts into
+  `run.androidStagingDir` for the game's import dialog, with best-effort `am force-stop`/`am start`, and
+  fails loudly when a debugger is requested (no JWDP on the Android runtime) or when `useDeployRun` is off
+  (the APK only loads classes.dex). `run.useHeadlessServer` is the path that actually runs there.
+- **The `runMindustry` registration happens at apply time, and the Android behaviour is attached in
+  `afterEvaluate`**: `run { }` is evaluated after `apply()`, so deciding the task type there would always
+  read the default — that bug registered a JavaExec on Android, downloaded the desktop jar and launched it.
+  Registering early is also what keeps `tasks.named("runMindustry")` usable from a build script.
 - **d8**: drain its merged output *while* it runs (a full pipe buffer deadlocks `waitFor`), include the
   captured output in failure messages, and delete a half-written output jar.
 - **SDK installs never modify an SDK they did not create**, and the post-install check only reports

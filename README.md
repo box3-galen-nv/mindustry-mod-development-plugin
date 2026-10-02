@@ -343,6 +343,16 @@ Two findings worth knowing, both verified against the game:
 - On the Android client, neither `MINDUSTRY_DATA_DIR` nor `-Dmindustry.data.dir` has any effect — its
   launcher sets the data directory itself, and nothing can pass JVM arguments to an APK.
 
-**Not supported yet.** `runMindustry` deliberately refuses to launch the desktop jar on Android, and the
-headless-server route (run `server-release.jar` and attach `jdb`/a DAP client to port 5005) is designed but
-not implemented. Today the Android workflow is: build, then import in the game.
+**Running on Android.** `runMindustry` stages each built jar into `run.androidStagingDir` (default
+`$HOME/AndroidStaging`), tells you to use **Mods → Import mod**, and calls `am force-stop` so the game picks
+the file up on its next start; `run.androidLaunchApk = true` also runs `am start`. A missing or refusing `am`
+is only a warning. Staging is all this needs: there is no JVM to launch, because the APK's launcher takes no
+JVM arguments and no other app may write into its `Android/data` directory for you. Requesting a debugger on
+Android fails with an explanation, since the Android runtime has no JDWP socket.
+
+**Headless server, and how to debug on a phone.** `run.useHeadlessServer = true` runs `server-release.jar`
+(downloaded by `downloadHeadlessServer` into `download.headlessJarPath`) inside
+`run.headlessServerWorkingDir`, whose `config/mods` is where the mods are staged. That is an ordinary JVM,
+so `-PmindustryDebug=true` opens the usual `localhost:5005` for `jdb -attach localhost:5005` or a DAP client
+— the one way to debug on a phone. The server follows `download.mindustryDownloadVersion`, and a mismatch
+with `mindustryApiVersion` warns, because it shows up as `NoClassDefFoundError`.

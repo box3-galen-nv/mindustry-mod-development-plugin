@@ -318,5 +318,14 @@ org.gradle.jvmargs=-Xmx1g
 - 在 Android 客户端上，`MINDUSTRY_DATA_DIR` 与 `-Dmindustry.data.dir` **都无效** —— 启动器自己设定数据目录，
   而且无法给 APK 传 JVM 参数。
 
-**暂不支持。** `runMindustry` 在 Android 上刻意不会去启动桌面 jar；无头服务器路线（跑 `server-release.jar`
-并用 `jdb`/DAP 客户端 attach 到 5005）已有设计但尚未实现。目前的 Android 工作流是：构建，然后在游戏内导入。
+**在 Android 上运行。** `runMindustry` 会把每个构建好的 jar 暂存到 `run.androidStagingDir`（默认
+`$HOME/AndroidStaging`），提示你用 **模组 → 导入模组**，并调用 `am force-stop` 让游戏下次启动时读到该文件；
+`run.androidLaunchApk = true` 还会执行 `am start`。找不到 `am` 或它拒绝执行都只是告警 —— 暂存本身就是全部所需：
+这里没有 JVM 可启动，因为 APK 的启动器不接受 JVM 参数，而且没有别的应用能替你写入它的 `Android/data` 目录。
+在 Android 上请求调试会直接失败并说明原因（Android 运行时没有 JDWP 套接字）。
+
+**无头服务器，以及手机上如何调试。** `run.useHeadlessServer = true` 会运行 `server-release.jar`（由
+`downloadHeadlessServer` 下载到 `download.headlessJarPath`），工作目录是 `run.headlessServerWorkingDir`，模组被暂存到
+它的 `config/mods`。它就是一个普通 JVM，所以 `-PmindustryDebug=true` 会照常打开 `localhost:5005`，供
+`jdb -attach localhost:5005` 或 DAP 客户端连接 —— 这是手机上唯一可行的调试方式。服务器跟随
+`download.mindustryDownloadVersion`；与 `mindustryApiVersion` 不一致时会告警，因为那会以 `NoClassDefFoundError` 收场。
