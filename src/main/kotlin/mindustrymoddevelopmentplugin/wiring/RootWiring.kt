@@ -1,39 +1,23 @@
 package mindustrymoddevelopmentplugin.wiring
 
 import java.io.File
-import javax.inject.Inject
-import mindustrymoddevelopmentplugin.dsl.MindustryBuildConfig
 import mindustrymoddevelopmentplugin.dsl.MindustryDownloadConfig
-import mindustrymoddevelopmentplugin.dsl.MindustryModExtension
 import mindustrymoddevelopmentplugin.dsl.MindustryModRootExtension
 import mindustrymoddevelopmentplugin.dsl.MindustryRunConfig
 import mindustrymoddevelopmentplugin.game.GameDataDir
 import mindustrymoddevelopmentplugin.game.MindustryApi
-import mindustrymoddevelopmentplugin.meta.ArtifactNaming
-import mindustrymoddevelopmentplugin.meta.ModFileReader
-import mindustrymoddevelopmentplugin.meta.ModMeta
 import mindustrymoddevelopmentplugin.platform.HostPlatform
-import mindustrymoddevelopmentplugin.sdk.AndroidSdk
-import mindustrymoddevelopmentplugin.tasks.BuildModHJsonTask
 import mindustrymoddevelopmentplugin.tasks.ClearModsTask
-import mindustrymoddevelopmentplugin.tasks.DeployTask
 import mindustrymoddevelopmentplugin.tasks.DownloadMindustryTask
 import mindustrymoddevelopmentplugin.tasks.GenerateIdeaRunConfigsTask
 import mindustrymoddevelopmentplugin.idea.IdeaRunConfigs
-import mindustrymoddevelopmentplugin.tasks.JarAndroidTask
-import mindustrymoddevelopmentplugin.tasks.JarTask
 import mindustrymoddevelopmentplugin.logging.RunLogging
 import mindustrymoddevelopmentplugin.tasks.RunMindustryTask
 import org.gradle.api.GradleException
-import org.gradle.api.Plugin
 import org.gradle.api.Project
-import org.gradle.api.logging.Logger
 import org.gradle.api.tasks.JavaExec
-import org.gradle.api.tasks.SourceSet
-import org.gradle.api.tasks.SourceSetContainer
 import org.gradle.api.tasks.bundling.Jar
 import org.gradle.build.event.BuildEventsListenerRegistry
-import org.jetbrains.kotlin.gradle.dsl.KotlinProjectExtension
 import mindustrymoddevelopmentplugin.MindustryModPlugin
 
 /**
@@ -130,17 +114,21 @@ internal object RootWiring {
             }
         }
 
-        // Resolved at task realization time, when every project has been configured — otherwise the
-        // `deploy` tasks of subprojects do not exist yet and the scan silently finds nothing.
-        //
-        // The root project is included on purpose: in single-project mode the root project *is* the mod,
-        // and `subprojects` does not contain it, so a run used to deploy nothing without saying so. A
-        // root that is not a mod simply has no `deploy` task and is filtered out here.
+        /*
+        Resolved at task realization time, when every project has been configured — otherwise the
+        `deploy` tasks of subprojects do not exist yet and the scan silently finds nothing.
+        
+        The root project is included on purpose: in single-project mode the root project *is* the mod,
+        and `subprojects` does not contain it, so a run used to deploy nothing without saying so. A
+        root that is not a mod simply has no `deploy` task and is filtered out here.
+        */
         val modProjects = project.providers.provider {
             (listOf(project.rootProject) + project.rootProject.subprojects)
-                // `is Jar` and not just "a task called deploy": a subproject may deploy to a server or a
-                // container with its own `deploy`, and that one used to be picked up here — clearMods then
-                // crashed on it and runMindustry complained that it is not a Jar task.
+                /*
+                `is Jar` and not just "a task called deploy": a subproject may deploy to a server or a
+                container with its own `deploy`, and that one used to be picked up here — clearMods then
+                crashed on it and runMindustry complained that it is not a Jar task.
+                */
                 .filter { it.tasks.findByName("deploy") is Jar }
         }
 
@@ -152,10 +140,12 @@ internal object RootWiring {
             ).absoluteFile
         }
 
-        // Only a directory *this build* picks needs the JVM property — the game already honours the
-        // environment variable and its own per-OS default, so passing the property for those would be
-        // redundant (and would earn a warning on a version that cannot read it). A project-local
-        // directory is simply one of the values the build script can set.
+        /*
+        Only a directory *this build* picks needs the JVM property — the game already honors the
+        environment variable and its own per-OS default, so passing the property for those would be
+        redundant (and would earn a warning on a version that cannot read it). A project-local
+        directory is simply one of the values the build script can set.
+        */
         val chosenDataDir = project.providers.provider { run.gameDataDir.orNull?.asFile?.absoluteFile }
 
         // The game only looks for mods under <dataDir>/mods, so that path follows the data directory;
@@ -206,15 +196,17 @@ internal object RootWiring {
             RunMindustryTask.configure(
                 task, modArtifacts(modProjects.get(), if (run.useDeployRun.get()) "deploy" else "jar"),
                 downloadPath.get(), resolvedModsDir, project,
-                run.useDeployRun.get(), run.deployTag.get(),
+                run.deployTag.get(),
                 debug.maxLogFiles.get(), debug.enableRunLogging.get(),
                 dataDir = resolvedDataDir,
                 // Registered on demand and shared per build, so no plumbing is needed.
                 logCleanup = RunLogging.register(project, buildEvents),
                 debug = RunMindustryTask.DebugOptions(
-                    // The generated IDEA configuration passes -PmindustryDebug=true. A property given on
-                    //     the command line wins over the DSL in both directions, so CI can force the
-                    //     socket off for a project that enables it in `debug { }`.
+                    /*
+                    The generated IDEA configuration passes -PmindustryDebug=true. A property given on
+                    the command line wins over the DSL in both directions, so CI can force the
+                    socket off for a project that enables it in `debug { }`.
+                    */
                     enabled = GradleProperties.booleanOrNull(project, IdeaRunConfigs.DEBUG_PROPERTY)
                         ?: debug.enableDebug.get(),
                     port = debug.debugPort.get(),
@@ -225,9 +217,11 @@ internal object RootWiring {
             )
         }
 
-        // Android has no JVM to launch and no debugger to attach to. The task above is registered at apply
-        // time so a build script can still write tasks.named("runMindustry") { dependsOn("deploy") }; the
-        // staging behaviour is attached here, because run { } is only evaluated after apply().
+        /*
+        Android has no JVM to launch and no debugger to attach to. The task above is registered at apply
+        time so a build script can still write tasks.named("runMindustry") { dependsOn("deploy") }; the
+        staging behavior is attached here, because run { } is only evaluated after apply().
+        */
         project.afterEvaluate {
             if (run.hostPlatform.get() == HostPlatform.Android && !run.useHeadlessServer.get()) {
                 val debugRequested = GradleProperties.booleanOrNull(project, IdeaRunConfigs.DEBUG_PROPERTY)
@@ -250,8 +244,7 @@ internal object RootWiring {
                 task.actions.clear()
                 task.setDependsOn(emptyList<String>())
                 RunMindustryTask.configureAndroid(
-                    task, modArtifacts(modProjects.get(), "deploy"), project,
-                    useDeployRun = true,
+                    task, modArtifacts(modProjects.get(), "deploy"),
                     deployTag = run.deployTag.get(),
                     options = RunMindustryTask.AndroidOptions(
                         appId = run.androidAppId.get(),
@@ -270,7 +263,7 @@ internal object RootWiring {
             if (run.hostPlatform.get() != HostPlatform.Android) {
                 project.tasks.register("generateIdeaRunConfigs") { task ->
                     // The generated configuration runs the packaging task before `runMindustry`, because the
-                    //     task itself no longer depends on it and a one-click IDE run should build first.
+                    // task itself no longer depends on it and a one-click IDE run should build first.
                     GenerateIdeaRunConfigsTask.configure(
                         task, project, debug.debugPort,
                         packagingTask = if (run.useDeployRun.get()) "deploy" else "jar",

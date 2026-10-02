@@ -19,7 +19,7 @@ enum class HostPlatform {
 
     companion object {
         /**
-         * Recognises Termux, which is what [Android] means here.
+         * Recognizes Termux, which is what [Android] means here.
          *
          * The environment is passed in rather than read so the decision is testable and so a build can show
          * what was inspected. `PREFIX` is only trusted when it points inside `com.termux`, because unrelated

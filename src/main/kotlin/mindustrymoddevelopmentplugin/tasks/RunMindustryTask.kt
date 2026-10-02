@@ -12,7 +12,6 @@ import org.gradle.api.GradleException
 import org.gradle.api.Project
 import org.gradle.api.Task
 import org.gradle.api.tasks.JavaExec
-import org.gradle.api.tasks.bundling.Jar
 
 /**
  * Configures `runMindustry`, which deploys the built mods and launches the game.
@@ -86,14 +85,10 @@ internal object RunMindustryTask {
     fun configureAndroid(
         task: Task,
         mods: List<ModArtifact>,
-        project: Project,
-        useDeployRun: Boolean,
         deployTag: String,
         options: AndroidOptions,
     ) {
-        val deployTaskName = if (useDeployRun) "deploy" else "jar"
         val prefix = "[$deployTag]"
-        // Resolved while configuring: an action may not reach into the project for it.
 
         task.group = "mindustry"
         task.description = "Stages the built mods for Android; import them in the game to load them."
@@ -188,7 +183,6 @@ internal object RunMindustryTask {
         downloadPath: File,
         modsDir: File,
         project: Project,
-        useDeployRun: Boolean,
         deployTag: String,
         maxLogFiles: Int = 25,
         enableRunLogging: Boolean = true,
@@ -197,7 +191,6 @@ internal object RunMindustryTask {
         headless: HeadlessOptions? = null,
         logCleanup: Provider<RunLogging.CleanupService>? = null,
     ) {
-        val deployTaskName = if (useDeployRun) "deploy" else "jar"
         val prefix = "[$deployTag]"
         // Resolved while configuring: an action may not reach into the project for it.
         val logDir = project.layout.buildDirectory.dir("logger").get().asFile
@@ -208,10 +201,13 @@ internal object RunMindustryTask {
 
         task.dependsOn(headless?.downloadTaskName ?: "downloadMindustry")
         task.dependsOn("clearMods")
-        // Packaging is deliberately *not* a dependency: `gradle <packaging> runMindustry` builds first
-        //     (Gradle executes command-line tasks in the given order), and a build script that wants the
-        //     coupling writes `tasks.named("runMindustry") { dependsOn(":sub:deploy") }` itself. The copy
-        //     below only reads the packaging task's archive path, so it works either way.
+
+        /*
+        Packaging is deliberately *not* a dependency: `gradle <packaging> runMindustry` builds first
+        (Gradle executes command-line tasks in the given order), and a build script that wants the
+        coupling writes `tasks.named("runMindustry") { dependsOn(":sub:deploy") }` itself. The copy
+        below only reads the packaging task's archive path, so it works either way.
+        */
         if (headless == null) {
             task.classpath = project.files(downloadPath)
             task.mainClass.set("mindustry.desktop.DesktopLauncher")
@@ -222,20 +218,24 @@ internal object RunMindustryTask {
         }
 
         if (dataDir != null && headless == null) {
-            // Absolute path on purpose: the game runs `files.absolute(...)` on the value, so a
-            //     relative path would resolve against the process working directory, while Gradle's
-            //     default workingDir is the project directory. JavaExec treats every jvmArgs element
-            //     as one complete argument, so a path containing spaces is safe.
-            //     Do not add MINDUSTRY_DATA_DIR here: the property wins over the environment variable,
-            //     and exporting one would make the run depend on the child process environment.
+            /*
+            Absolute path on purpose: the game runs `files.absolute(...)` on the value, so a
+            relative path would resolve against the process working directory, while Gradle's
+            default workingDir is the project directory. JavaExec treats every jvmArgs element
+            as one complete argument, so a path containing spaces is safe.
+            Do not add MINDUSTRY_DATA_DIR here: the property wins over the environment variable,
+            and exporting one would make the run depend on the child process environment.
+            */
             task.jvmArgs("-Dmindustry.data.dir=${dataDir.absolutePath}")
         }
 
         if (debug.enabled) {
-            // `localhost:` keeps the socket on the loopback interface. The `*:` form binds every
-            //     interface, and an unauthenticated JDWP port is remote code execution for anyone on
-            //     the network — IDEA's Remote JVM Debug configuration also targets localhost.
-            //     Verified on JDK 17+: `address=localhost:PORT` listens on 127.0.0.1 only.
+            /*
+            `localhost:` keeps the socket on the loopback interface. The `*:` form binds every
+            interface, and an unauthenticated JDWP port is remote code execution for anyone on
+            the network — IDEA's Remote JVM Debug configuration also targets localhost.
+            Verified on JDK 17+: `address=localhost:PORT` listens on 127.0.0.1 only.
+            */
             task.jvmArgs(
                 "-agentlib:jdwp=transport=dt_socket,server=y," +
                 "suspend=${if (debug.suspend) "y" else "n"},address=localhost:${debug.port}"
@@ -258,12 +258,16 @@ internal object RunMindustryTask {
                 task.logger.lifecycle("Game data directory: ${gameDataDir.absolutePath}")
             }
 
-            // Usually <dataDir>/mods now: MindustryModPlugin derives that path from the data directory
-            //     unless the build script configured one itself.
+            /*
+            Usually <dataDir>/mods now: MindustryModPlugin derives that path from the data directory
+            unless the build script configured one itself.
+            */
             modsDir.mkdirs()
 
-            // A port that is already taken makes the game JVM abort before it starts, with a
-            //     JDWP error that is easy to misread as a game crash — warn first.
+            /*
+            A port that is already taken makes the game JVM abort before it starts, with a
+            JDWP error that is easy to misread as a game crash — warn first.
+            */
             if (debug.enabled && isPortInUse(debug.port)) {
                 task.logger.warn(
                     "Debug port ${debug.port} is already in use, so the game JVM cannot open it. " +
@@ -285,17 +289,21 @@ internal object RunMindustryTask {
                 mod.jar.copyTo(File(modsDir, "$prefix${mod.jar.name}"), overwrite = true)
             }
 
-            // Write the game output to a log file in build/logger/ (tee to console).
-            //     Can be turned off via run.enableRunLogging = false.
+            /*
+            Write the game output to a log file in build/logger/ (tee to console).
+            Can be turned off via run.enableRunLogging = false.
+            */
             if (enableRunLogging) {
                 logDir.mkdirs()
                 val logFile = File(logDir, "log_${SimpleDateFormat("yyyyMMdd_HHmmss_SSS").format(Date())}.log")
-                // Buffered — the game can emit tens of MB, and every unbuffered write
-                //     is a syscall (a 10 MB benchmark is ~25x slower without the buffer).
+                /*
+                Buffered — the game can emit tens of MB, and every unbuffered write
+                is a syscall (a 10 MB benchmark is ~25x slower without the buffer).
+                */
                 val fos = BufferedOutputStream(FileOutputStream(logFile))
 
                 // Delete old logs, keeping only the newest maxLogFiles entries. A value below one would
-                //     make drop() throw, and zero would delete the log this run is writing, so clamp it.
+                // make drop() throw, and zero would delete the log this run is writing, so clamp it.
                 if (maxLogFiles < 1) {
                     task.logger.warn(
                         "debug.maxLogFiles is $maxLogFiles; keeping one log file instead."
@@ -315,12 +323,11 @@ internal object RunMindustryTask {
             }
         }
 
-        // Close the log streams when the task succeeds (doLast) and when it fails.
-        //     Gradle has no doFinally, so a task-finish event covers the failure path (see
-        //     RunLogging.registerFailureCleanup) — this prevents a crashed game or failed task
-        //     from leaking the file handle.
-        // The success path closes in doLast and the failure path through a task-finish event; the flag
-        // makes the "exactly once" a property of the code rather than of the event ordering.
+        /*
+        Close the log file on both paths: doLast for success, a task-finish event for failure (Gradle
+        has no doFinally). The flag makes "exactly once" a property of the code rather than of the
+        event ordering.
+        */
         var logStreamsClosed = false
         fun closeLogStreams() {
             if (!enableRunLogging || logStreamsClosed) return
@@ -350,7 +357,7 @@ internal object RunMindustryTask {
         try {
             java.net.ServerSocket(port).close()
             false
-        } catch (e: java.net.BindException) {
+        } catch (_: java.net.BindException) {
             true
         } catch (e: IllegalArgumentException) {
             // Not "in use" but "not a port": saying the port is taken sent people hunting for a

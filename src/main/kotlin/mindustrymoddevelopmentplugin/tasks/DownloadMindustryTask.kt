@@ -79,7 +79,7 @@ internal object DownloadMindustryTask {
             }
             if (offline && !target.isFile) {
                 // Gradle's own offline flag only covers dependency resolution, so tasks doing their own
-                // network access have to honour it — and say so, rather than fetching behind the user's back.
+                // network access have to honor it — and say so, rather than fetching behind the user's back.
                 throw GradleException(
                     "Cannot download $url in offline mode and '$target' does not exist. " +
                     "Run without --offline, or point download.mindustryGamePath at an existing jar."

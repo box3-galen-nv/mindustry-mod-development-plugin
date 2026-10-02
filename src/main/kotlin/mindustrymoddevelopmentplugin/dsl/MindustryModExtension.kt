@@ -37,8 +37,7 @@ import org.gradle.api.provider.Provider
  */
 abstract class MindustryModExtension @Inject constructor(val project: Project) {
 
-    // -- Mod metadata ------------------------------------------------------------
-    // Extension properties, configured directly with a block in build.gradle.kts
+    // ---- Mod metadata ----
 
     /**
      * Mod metadata, shared with the project-level `modMeta { }` extension.
@@ -52,7 +51,7 @@ abstract class MindustryModExtension @Inject constructor(val project: Project) {
         get() = project.extensions.findByType(ModMeta::class.java)
             ?: project.extensions.create("modMeta", ModMeta::class.java)
 
-    // -- Gradle lazy properties --------------------------------------------------
+    // ---- Gradle lazy properties ----
 
     /** Whether to generate `mod.hjson`/`mod.json` automatically. Default `false`. */
     abstract val generateModMeta: Property<Boolean>
@@ -86,7 +85,7 @@ abstract class MindustryModExtension @Inject constructor(val project: Project) {
         action.execute(modMeta)
     }
 
-    // -- Utility methods ---------------------------------------------------------
+    // ---- Utility methods ----
 
     /**
      * Generates the mod jar file name (without the `.jar` suffix).

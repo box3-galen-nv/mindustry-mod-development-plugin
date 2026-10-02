@@ -33,16 +33,17 @@ class MindustryModPlugin @Inject constructor(
     /** Needed to close a leaked `runMindustry` log file when the task fails — Gradle has no `doFinally`. */
     private val buildEvents: BuildEventsListenerRegistry,
 ) : Plugin<Project> {
-
     override fun apply(project: Project) {
         // Once per Gradle instance, before any task can run.
         RunLogging.register(project, buildEvents)
 
         registerExtensions(project)
 
-        // `java` is applied here rather than in afterEvaluate so that `java { }`, `sourceSets { }` and the
-        // `implementation` accessor all exist while the build script is still being evaluated. Whether a
-        // project is a mod is not known yet, and applying `java` to a non-mod project is harmless.
+        /*
+        `java` is applied here rather than in afterEvaluate so that `java { }`, `sourceSets { }` and the
+        `implementation` accessor all exist while the build script is still being evaluated. Whether a
+        project is a mod is not known yet, and applying `java` to a non-mod project is harmless.
+        */
         if (!project.plugins.hasPlugin("java")) {
             project.pluginManager.apply("java")
         }

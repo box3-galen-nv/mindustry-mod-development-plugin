@@ -105,9 +105,11 @@ internal object AndroidSdk {
         userHome: File = File(System.getProperty("user.home")),
         osName: String = System.getProperty("os.name"),
     ): File? {
-        // A configured directory that is *not there* must not end the search: it used to return
-        // null immediately, which hid a perfectly good ANDROID_HOME behind a stale path. Callers
-        // that want to create the configured path do it themselves (resolveOrInstallSdk).
+        /*
+        A configured directory that is *not there* must not end the search: it used to return
+        null immediately, which hid a perfectly good ANDROID_HOME behind a stale path. Callers
+        that want to create the configured path do it themselves (resolveOrInstallSdk).
+        */
         if (configured != null && configured.isDirectory) return configured
 
         for (value in listOf(env["ANDROID_HOME"], env["ANDROID_SDK_ROOT"])) {

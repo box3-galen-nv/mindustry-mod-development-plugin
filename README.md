@@ -167,7 +167,7 @@ Notes: `data/` sits outside `build/`, so `./gradlew clean` does not delete it �
 
 #### Android SDK auto-install
 
-`jarAndroid` needs an SDK with a `platforms/<ver>/android.jar` and a `build-tools/<ver>/d8`. When the resolved SDK cannot satisfy `download.androidSdkDownloadPackages` — it is missing, empty, or holds the *wrong versions* — the plugin downloads the official command-line tools from the configured channel and runs `sdkmanager` for those packages (licences are accepted automatically). The install target is `build.androidSdkDir` when set (an absent or empty directory is created), otherwise `run.androidSdkInstallDir`; an SDK found elsewhere, e.g. behind `ANDROID_HOME`, is used as-is and never modified. It is off by default, so a build never starts that download on its own: enable it with `download { androidSdkAutoDownload = true }`, otherwise `jarAndroid` fails with the list of locations it probed. With a mirror, point `androidSdkDownloadUrl` at it for the command-line tools, and specify the mirror as an HTTP proxy in `androidSdkExtraArgs` for the package downloads (`--proxy=http --proxy_host=<host> --proxy_port=<port>`, plus `--no_https` if it only speaks HTTP) — `sdkmanager` reads Google's own package list, so that proxy is the only way to redirect them.
+`jarAndroid` needs an SDK with a `platforms/<ver>/android.jar` and a `build-tools/<ver>/d8`. When the resolved SDK cannot satisfy `download.androidSdkDownloadPackages` — it is missing, empty, or holds the *wrong versions* — the plugin downloads the official command-line tools from the configured channel and runs `sdkmanager` for those packages (licenses are accepted automatically). The installation target is `build.androidSdkDir` when set (an absent or empty directory is created), otherwise `run.androidSdkInstallDir`; an SDK found elsewhere, e.g. behind `ANDROID_HOME`, is used as-is and never modified. It is off by default, so a build never starts that download on its own: enable it with `download { androidSdkAutoDownload = true }`, otherwise `jarAndroid` fails with the list of locations it probed. With a mirror, point `androidSdkDownloadUrl` at it for the command-line tools, and specify the mirror as an HTTP proxy in `androidSdkExtraArgs` for the package downloads (`--proxy=http --proxy_host=<host> --proxy_port=<port>`, plus `--no_https` if it only speaks HTTP) — `sdkmanager` reads Google's own package list, so that proxy is the only way to redirect them.
 
 > `sdkmanager` caches the repository manifest under `$ANDROID_USER_HOME/cache` (default `~/.android/cache`) and reports a *download* failure when that path is read-only — a real trap in containers and sandboxes. Unless `ANDROID_USER_HOME` is already set, the plugin redirects it to `<sdk>/.android-user`.
 
@@ -323,7 +323,7 @@ but since Android 11 no other app — Termux included — may write there, and s
 needs the file to be read-only. So import the built jar in the game instead: **Mods → Import mod**, and
 pick `build/libs/<name>.jar`. The BE build uses the app id `io.anuke.mindustry.be`; both are configurable
 with `run.androidAppId`, and `run.hostPlatform` (default `Auto`) decides whether the build treats itself as
-Android. Termux is recognised from `TERMUX_VERSION` or a `PREFIX` inside `com.termux`.
+Android. Termux is recognized from `TERMUX_VERSION` or a `PREFIX` inside `com.termux`.
 
 **gradle.properties** for a phone:
 

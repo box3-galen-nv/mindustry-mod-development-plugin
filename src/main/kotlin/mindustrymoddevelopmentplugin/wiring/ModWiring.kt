@@ -1,39 +1,23 @@
 package mindustrymoddevelopmentplugin.wiring
 
 import mindustrymoddevelopmentplugin.game.MindustryApi
-import mindustrymoddevelopmentplugin.game.GameDataDir
-import mindustrymoddevelopmentplugin.platform.HostPlatform
 import mindustrymoddevelopmentplugin.meta.ArtifactNaming
 import mindustrymoddevelopmentplugin.dsl.MindustryBuildConfig
 import mindustrymoddevelopmentplugin.dsl.MindustryDownloadConfig
 import mindustrymoddevelopmentplugin.dsl.MindustryModExtension
 import mindustrymoddevelopmentplugin.dsl.MindustryModRootExtension
-import mindustrymoddevelopmentplugin.dsl.MindustryRunConfig
-import mindustrymoddevelopmentplugin.meta.ModFileReader
-import mindustrymoddevelopmentplugin.meta.ModMeta
 import mindustrymoddevelopmentplugin.tasks.JarTask
 import mindustrymoddevelopmentplugin.tasks.DeployTask
 import mindustrymoddevelopmentplugin.tasks.BuildModHJsonTask
 import mindustrymoddevelopmentplugin.sdk.AndroidSdk
-import mindustrymoddevelopmentplugin.tasks.ClearModsTask
-import mindustrymoddevelopmentplugin.tasks.DownloadMindustryTask
-import mindustrymoddevelopmentplugin.tasks.GenerateIdeaRunConfigsTask
-import mindustrymoddevelopmentplugin.idea.IdeaRunConfigs
 import mindustrymoddevelopmentplugin.tasks.JarAndroidTask
-import mindustrymoddevelopmentplugin.tasks.RunMindustryTask
-import mindustrymoddevelopmentplugin.logging.RunLogging
 import java.io.File
-import javax.inject.Inject
 import org.gradle.api.GradleException
-import org.gradle.api.Plugin
 import org.gradle.api.Project
-import org.gradle.api.logging.Logger
-import org.gradle.api.tasks.JavaExec
 import org.gradle.api.tasks.SourceSet
 import org.jetbrains.kotlin.gradle.dsl.KotlinProjectExtension
 import org.gradle.api.tasks.SourceSetContainer
 import org.gradle.api.tasks.bundling.Jar
-import org.gradle.build.event.BuildEventsListenerRegistry
 import mindustrymoddevelopmentplugin.MindustryModPlugin
 
 /**
@@ -42,12 +26,14 @@ import mindustrymoddevelopmentplugin.MindustryModPlugin
  * grown past 700 lines, and kept as one object so each file still declares exactly one thing.
  */
 internal object ModWiring {
-
     internal fun configureModule(project: Project, ext: MindustryModExtension, hasModFile: Boolean) {
-        // Computed once and shared: the Kotlin-presence scan and the source sets must agree, and
-        //     building the list twice would walk the same paths twice.
-        // Every project whose directory sits inside this one: a root project that is also a mod must not
-        // package its subprojects' sources (and a nested subproject must not package its own children).
+        /*
+        Computed once and shared: the Kotlin-presence scan and the source sets must agree, and
+        building the list twice would walk the same paths twice.
+
+        Every project whose directory sits inside this one: a root project that is also a mod must not
+        package its subprojects' sources (and a nested subproject must not package its own children).
+        */
         val nestedProjectDirs = project.rootProject.allprojects
             .filter { it != project && it.projectDir.toPath().startsWith(project.projectDir.toPath()) }
             .map { it.projectDir }
@@ -64,7 +50,7 @@ internal object ModWiring {
         MindustryApi.configure(project, rootExt?.mindustryApiVersion?.orNull)
         configureSourceDirs(project, kotlin, excludedSources)
 
-        // -- Names ---------------------------------------------------------------
+        // ---- Names ----
         val build = rootExt?.build
         val author = ArtifactNaming.resolveMetaValue(ext.modMeta.author, project.projectDir, "author")
         // Only worth warning about when the format asks for it: the default one does not, and warning on
@@ -83,7 +69,7 @@ internal object ModWiring {
         val generateMeta = ext.generateModMeta.get()
         val libsDir = project.layout.buildDirectory.dir("libs").get().asFile
 
-        // -- Tasks ---------------------------------------------------------------
+        // ---- Tasks ----
         project.tasks.register("buildModHJson") { task ->
             task.group = MindustryModPlugin.MINDUSTRY_GROUP
             task.description = "Writes mod.json / mod.hjson from the modMeta { } block."
@@ -210,11 +196,13 @@ internal object ModWiring {
             d8TimeoutMinutes = build?.d8TimeoutMinutes?.get() ?: MindustryBuildConfig.DEFAULT_D8_TIMEOUT_MINUTES,
             d8DrainJoinMillis = build?.d8DrainJoinMillis?.get()
                 ?: MindustryBuildConfig.DEFAULT_D8_DRAIN_JOIN_MILLIS,
-            // `build.d8Executable` always wins. The PATH is only consulted when the project did *not* name an
-            // SDK directory: a configured `androidSdkDir` is an explicit instruction, and a project that
-            // points it at an empty directory expects that one to be installed rather than silently using
-            // whatever d8 happens to be on the PATH. With no SDK configured — Termux, where `pkg install d8`
-            // is the whole setup — the PATH is exactly what should be used, and no SDK is touched.
+            /*
+            `build.d8Executable` always wins. The PATH is only consulted when the project did *not* name an
+            SDK directory: a configured `androidSdkDir` is an explicit instruction, and a project that
+            points it at an empty directory expects that one to be installed rather than silently using
+            whatever d8 happens to be on the PATH. With no SDK configured — Termux, where `pkg install d8`
+            is the whole setup — the PATH is exactly what should be used, and no SDK is touched.
+            */
             d8Command = AndroidSdk.resolveD8(
                 configured = build?.d8Executable?.orNull?.asFile,
                 pathEnv = if (build?.androidSdkDir?.orNull != null) null else System.getenv("PATH"),
@@ -268,9 +256,11 @@ internal object ModWiring {
         if (home.startsWith(root) && home != root) {
             excludes.add(root.relativize(home).toString().replace(File.separatorChar, '/') + "/**")
         }
-        // Directories of *other* projects that live inside this one. A root project that is itself a mod
-        // would otherwise compile the subprojects' sources into its own jar — duplicate classes at best,
-        // someone else's code shipped at worst. Subprojects normally live under `src/<name>/`.
+        /*
+        Directories of *other* projects that live inside this one. A root project that is itself a mod
+        would otherwise compile the subprojects' sources into its own jar — duplicate classes at best,
+        someone else's code shipped at worst. Subprojects normally live under `src/<name>/`.
+        */
         for (nested in nestedProjectDirs) {
             val nestedPath = nested.toPath()
             if (nestedPath.startsWith(root) && nestedPath != root) {

@@ -31,7 +31,6 @@ class MindustryRunMindustryTest {
             downloadPath = File(project.projectDir, "game.jar"),
             modsDir = File(project.projectDir, "mods"),
             project = project,
-            useDeployRun = true,
             deployTag = "d",
             maxLogFiles = 25,
             enableRunLogging = enableRunLogging,
@@ -108,9 +107,7 @@ class MindustryRunMindustryTest {
         assertTrue(logs[0].readText().contains("hello-log"), "关闭后内容仍应在文件里")
     }
 
-    // =========================================================================
-    //  JDWP (enabled by -PmindustryDebug, port from run.debugPort)
-    // =========================================================================
+    // ---- JDWP (enabled by -PmindustryDebug, port from run.debugPort) ----
 
     @Test
     fun `debug disabled adds no jdwp argument`() {
@@ -146,9 +143,7 @@ class MindustryRunMindustryTest {
         assertTrue(!jdwp.contains("address=*:"), "the debug socket must not bind every interface: $jdwp")
     }
 
-    // =========================================================================
-    //  RunLogging failure cleanup (TaskExecutionListener replacement)
-    // =========================================================================
+    // ---- RunLogging failure cleanup (TaskExecutionListener replacement) ----
 
     @Test
     fun `failure cleanup runs once when the task fails and is dropped afterwards`() {
@@ -187,9 +182,7 @@ class MindustryRunMindustryTest {
         assertTrue(closed == 1)
     }
 
-    // =========================================================================
-    //  project-local game data dir
-    // =========================================================================
+    // ---- project-local game data dir ----
 
     @Test
     fun `data dir disabled adds no data dir argument`() {
@@ -226,7 +219,6 @@ class MindustryRunMindustryTest {
             downloadPath = File(project.projectDir, "game.jar"),
             modsDir = File(dataDir, "mods"),
             project = project,
-            useDeployRun = true,
             deployTag = "d",
             enableRunLogging = false,
             dataDir = dataDir,
@@ -250,7 +242,6 @@ class MindustryRunMindustryTest {
             downloadPath = File(project.projectDir, "game.jar"),
             modsDir = File(project.projectDir, "mods"),
             project = project,
-            useDeployRun = true,
             deployTag = "d",
             enableRunLogging = false,
             dataDir = dataDir,
@@ -262,9 +253,7 @@ class MindustryRunMindustryTest {
         assertTrue(error.message!!.contains("not a directory"), error.message!!)
     }
 
-    // =========================================================================
-    //  packaging is not a dependency
-    // =========================================================================
+    // ---- packaging is not a dependency ----
 
     @Test
     fun `packaging is not wired as a dependency`() {
@@ -281,7 +270,6 @@ class MindustryRunMindustryTest {
             downloadPath = File(project.projectDir, "game.jar"),
             modsDir = File(project.projectDir, "mods"),
             project = project,
-            useDeployRun = true,
             deployTag = "d",
             enableRunLogging = false,
         )

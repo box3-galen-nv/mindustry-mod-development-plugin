@@ -2,7 +2,7 @@
 
 Gradle plugin (`io.github.box3-galen-nv.mindustry-mod-development-plugin`) that builds Mindustry mods in Java or Kotlin. The
 user-facing documentation is `README.md` (English, the default) with `README_zh.md` as its Chinese
-twin — every behaviour or default change goes into **both**, and they link to each other at the top.
+twin — every behavior or default change goes into **both**, and they link to each other at the top.
 This file is the short list of things to know to change the code without breaking it.
 
 ## Build & test
@@ -13,7 +13,7 @@ GRADLE_USER_HOME="$PWD/.gradle-home" ./gradlew test --tests "*ModMeta*" --consol
 ```
 
 Test classes mirror the source package; `ProjectBuilder` for wiring tests, Gradle TestKit for real
-builds. Update `README.md` **and** `README_zh.md` when behaviour or a default changes.
+builds. Update `README.md` **and** `README_zh.md` when behavior or a default changes.
 
 The Gradle user home deliberately sits at the repository root, **never inside `build/`**: `clean`
 deletes `build/`, and deleting a Gradle home that live daemons are writing to fails with an opaque OS
@@ -51,6 +51,10 @@ logging/               RunLogging (the log tee and the cleanup BuildService)
 - **Comments**: English only, KDoc for every declaration. `//` only inside bodies and for section
   banners. Sentences start with a capital letter — tool names keep their casing, so reword instead of
   starting a sentence with `sdkmanager` or `mindustryMod`.
+- **Comment shape**: one line is `//`. Three or more consecutive lines of prose become one `/* */` block
+  whose body is flush with the `/*` — never a hanging indent on a continuation line — and a section
+  banner is the single line `// ---- Title ----`. Comments that only restate the code below them are
+  deleted; the ones worth keeping say why.
 - **Never write the comment terminator inside a KDoc** — that is an asterisk followed by a slash. Write
   globs as prose. It silently ends the comment and broke a build once.
 - An **unterminated KDoc** (typically a leftover opening marker above a freshly written block) makes the
@@ -81,7 +85,7 @@ logging/               RunLogging (the log tee and the cleanup BuildService)
   it is there, and fail naming the first `.kt` file when it is missing. Never apply Kotlin from
   `afterEvaluate` — Kotlin rejects the lifecycle. `java` *is* applied for the user, before the first
   `compileOnly` use.
-- **Source roots**: add the project dir to `main`'s java and kotlin source dirs (`srcDir`, never
+- **Source roots**: add the project dir to `main`'s java and Kotlin source dirs (`srcDir`, never
   `setSrcDirs`), excluding `build/`, `.gradle/`, `**/*.kts` (the Kotlin source filter matches scripts),
   any Gradle user home inside the project, and `data/`.
 - **The configuration cache is supported, and it constrains the code**: a task action may hold only plain
@@ -98,7 +102,7 @@ logging/               RunLogging (the log tee and the cleanup BuildService)
   `IdeaRunConfigs.TEMPLATE_REVISION` whenever the generated XML changes, or existing files stay stale.
 - **The mods path is always `<gameDataDir>/mods`**, created on demand. Unset, the data directory is
   `MINDUSTRY_DATA_DIR` or the per-OS default and the plugin passes no JVM property — only a directory the
-  build *sets* is passed as `-Dmindustry.data.dir`, since the game already honours the other two. An older
+  build *sets* is passed as `-Dmindustry.data.dir`, since the game already honors the other two. An older
   game version only warns. There is no project-local shorthand: `gameDataDir` is the single knob, and a
   multi-project build sets it per project.
 - **Property semantics**: read booleans by value, so `-Px=false` really means off. Where a per-run switch
@@ -124,11 +128,11 @@ logging/               RunLogging (the log tee and the cleanup BuildService)
   artifact name is resolved, so it is not a declared task input — the name changes anyway.
 - **d8 is looked up without an Android SDK, in this order**: `build.d8Executable`, then `d8` on the `PATH`
   (but only when the project did *not* configure `build.androidSdkDir` — an explicit SDK directory is an
-  instruction and gets installed if empty), then any installed SDK, then an install. A lone `lib/d8.jar` is
+  instruction and gets installed if empty), then any installed SDK, then an installation. A lone `lib/d8.jar` is
   run as `java -cp <jar> com.android.tools.r8.D8`, because build-tools' `d8` is a shell script and Android
   has no `/bin/sh`. `android.jar` is optional: d8 runs without it with a warning. Never let a resolved d8
-  trigger an install.
-- **Android is recognised, not assumed**: `HostPlatform.detect` treats Linux plus (`TERMUX_VERSION` or a
+  trigger an installation.
+- **Android is recognized, not assumed**: `HostPlatform.detect` treats Linux plus (`TERMUX_VERSION` or a
   `PREFIX` inside `com.termux`) as Android. Architecture is deliberately not part of it. `GameDataDir` has an
   Android branch — `/storage/emulated/0/Android/data/<appId>/files`, what `AndroidLauncher` sets — because
   `os.name` says "Linux" there and the desktop path is wrong. On the APK both `MINDUSTRY_DATA_DIR` and
@@ -138,7 +142,7 @@ logging/               RunLogging (the log tee and the cleanup BuildService)
   `run.androidStagingDir` for the game's import dialog, with best-effort `am force-stop`/`am start`, and
   fails loudly when a debugger is requested (no JWDP on the Android runtime) or when `useDeployRun` is off
   (the APK only loads classes.dex). `run.useHeadlessServer` is the path that actually runs there.
-- **The `runMindustry` registration happens at apply time, and the Android behaviour is attached in
+- **The `runMindustry` registration happens at apply time, and the Android behavior is attached in
   `afterEvaluate`**: `run { }` is evaluated after `apply()`, so deciding the task type there would always
   read the default — that bug registered a JavaExec on Android, downloaded the desktop jar and launched it.
   Registering early is also what keeps `tasks.named("runMindustry")` usable from a build script.
@@ -154,7 +158,7 @@ logging/               RunLogging (the log tee and the cleanup BuildService)
   place, and records the URL in a `<name>.url` stamp. That stamp is what separates a jar this build
   downloaded (a version change replaces it, `--offline` and up-to-date checks never touch the network)
   from one the user put there (never replaced, only reported when it cannot be a jar). `clearMods`
-  matches the deploy tag plus a regex derived from `build.format`, and deletes nothing when the mod name
+  matches the deployment tag plus a regex derived from `build.format`, and deletes nothing when the mod name
   cannot be resolved.
 - **The mod-project scan** (`(listOf(rootProject) + rootProject.subprojects).filter { it.tasks.findByName("deploy") is Jar }`)
   must run at task-realization time, not in `afterEvaluate`, or the root `runMindustry` silently deploys
@@ -209,4 +213,4 @@ logging/               RunLogging (the log tee and the cleanup BuildService)
 - The plugin id (`io.github.box3-galen-nv.mindustry-mod-development-plugin`) and group
   (`io.github.box3-galen-nv`) come from `gradle.properties` and `build.gradle.kts`; the package root is
   `mindustrymoddevelopmentplugin`. CI is `.github/workflows/ci.yml`: a JDK 17/21/25 test matrix plus
-  `validatePlugins` on ubuntu, and non-blocking macOS/Windows sanity jobs. No hooks, no codegen.
+  `validatePlugins` on Ubuntu, and non-blocking macOS/Windows sanity jobs. No hooks, no codegen.

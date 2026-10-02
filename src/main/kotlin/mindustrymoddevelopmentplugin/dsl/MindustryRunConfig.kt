@@ -17,7 +17,7 @@ import org.gradle.api.provider.Property
  */
 abstract class MindustryRunConfig {
 
-    // -- Where the game stores its data ------------------------------------------
+    // ---- Where the game stores its data ----
 
     /**
      * Directory the game keeps its user data in — `settings.bin`, `saves/`, `screenshots/`, and the
@@ -74,7 +74,7 @@ abstract class MindustryRunConfig {
     abstract val useDeployRun: Property<Boolean>
 
 
-    // -- Android SDK install target (consumed by jarAndroid) ----------------------
+    // ---- Android SDK install target (consumed by jarAndroid) ----
 
     /**
      * Directory the SDK is installed into when [MindustryBuildConfig.androidSdkDir] is unset.
@@ -106,7 +106,7 @@ abstract class MindustryRunConfig {
     abstract val androidSdkInstallDir: DirectoryProperty
 
     init {
-        // gameDataDir has no convention here: its default is the root project's directory, which this
+        // The gameDataDir property has no convention here: its default is the root project's directory, which this
         // class cannot see. MindustryModPlugin registers it.
         hostPlatform.convention(HostPlatform.Auto)
         useHeadlessServer.convention(false)

@@ -54,9 +54,7 @@ class MindustryModExtensionTest {
         assertTrue(read1 == 42)
         assertTrue(read2 == 42)
     }
-    // =========================================================================
-    //  File path properties (readme / license / icon / assets)
-    // =========================================================================
+    // ---- File path properties (readme / license / icon / assets) ----
 
     @Test
     fun `readme defaults to projectDir README`() {
@@ -94,9 +92,7 @@ class MindustryModExtensionTest {
         val expected = project.layout.projectDirectory.dir("assets").asFile
         assertTrue(ext.assets.files.any { it == expected })
     }
-    // =========================================================================
-    //  deployTag (run sub-config)
-    // =========================================================================
+    // ---- deployTag (run sub-config) ----
 
     @Test
     fun `deployTag defaults to the plugin constant`() {
@@ -120,9 +116,7 @@ class MindustryModExtensionTest {
         assertTrue(config.deployTag.get() == "x")
     }
 
-    // =========================================================================
-    //  cleanDeployedFiles (run sub-config)
-    // =========================================================================
+    // ---- cleanDeployedFiles (run sub-config) ----
 
     @Test
     fun `cleanDeployedFiles defaults to true`() {
@@ -135,9 +129,7 @@ class MindustryModExtensionTest {
         config.cleanDeployedFiles.set(false)
         assertTrue(config.cleanDeployedFiles.get() == false)
     }
-    // =========================================================================
-    //  useDeployRun (run sub-config)
-    // =========================================================================
+    // ---- useDeployRun (run sub-config) ----
 
     @Test
     fun `useDeployRun defaults to true`() {
@@ -152,9 +144,7 @@ class MindustryModExtensionTest {
         config.useDeployRun.set(false)
         assertTrue(config.useDeployRun.get() == false)
     }
-    // =========================================================================
-    //  maxLogFiles (debug sub-config)
-    // =========================================================================
+    // ---- maxLogFiles (debug sub-config) ----
 
     @Test
     fun `maxLogFiles defaults to 25`() {
@@ -170,9 +160,7 @@ class MindustryModExtensionTest {
         config.maxLogFiles.set(10)
         assertTrue(config.maxLogFiles.get() == 10)
     }
-    // =========================================================================
-    //  enableRunLogging (debug sub-config)
-    // =========================================================================
+    // ---- enableRunLogging (debug sub-config) ----
 
     @Test
     fun `enableRunLogging defaults to true`() {
@@ -188,9 +176,7 @@ class MindustryModExtensionTest {
         config.enableRunLogging.set(false)
         assertTrue(config.enableRunLogging.get() == false)
     }
-    // =========================================================================
-    //  debugging switches (debug sub-config)
-    // =========================================================================
+    // ---- debugging switches (debug sub-config) ----
 
     @Test
     fun `debug switches default to off on port 5005`() {
@@ -213,9 +199,7 @@ class MindustryModExtensionTest {
         assertTrue(config.debugPort.get() == 5011)
     }
 
-    // =========================================================================
-    //  androidSdkDir (build sub-config)
-    // =========================================================================
+    // ---- androidSdkDir (build sub-config) ----
 
     @Test
     fun `androidSdkDir defaults to unset`() {
@@ -231,9 +215,7 @@ class MindustryModExtensionTest {
         config.androidSdkDir.set(sdkDir)
         assertTrue(config.androidSdkDir.get().asFile == sdkDir.asFile)
     }
-    // =========================================================================
-    //  d8Args (build sub-config)
-    // =========================================================================
+    // ---- d8Args (build sub-config) ----
 
     @Test
     fun `d8Args defaults to empty`() {
@@ -249,9 +231,7 @@ class MindustryModExtensionTest {
         assertTrue(config.d8Args.get() == listOf("--no-desugaring", "--release"))
     }
 
-    // =========================================================================
-    //  d8TimeoutMinutes (build sub-config)
-    // =========================================================================
+    // ---- d8TimeoutMinutes (build sub-config) ----
 
     @Test
     fun `d8TimeoutMinutes defaults to 30 minutes`() {
@@ -268,9 +248,7 @@ class MindustryModExtensionTest {
         assertTrue(config.d8TimeoutMinutes.get() == 5L)
     }
 
-    // =========================================================================
-    //  android SDK download settings (download sub-config, consumed by jarAndroid)
-    // =========================================================================
+    // ---- Android SDK download settings (download sub-config, consumed by jarAndroid) ----
 
     @Test
     fun `androidSdkAutoDownload defaults to false`() {
@@ -317,9 +295,7 @@ class MindustryModExtensionTest {
         assertTrue(MindustryDownloadConfig.commandLineToolsUrl("Linux").startsWith("https://dl.google.com/"))
     }
 
-    // =========================================================================
-    //  build counter (atomic increment)
-    // =========================================================================
+    // ---- build counter (atomic increment) ----
 
     @Test
     fun `concurrent increments produce distinct numbers`() {
@@ -343,9 +319,7 @@ class MindustryModExtensionTest {
         assertTrue(ext.readBuildCounter() == expected, "the file must hold the last number, got ${ext.readBuildCounter()}")
     }
 
-    // =========================================================================
-    //  modMeta is a top-level extension
-    // =========================================================================
+    // ---- modMeta is a top-level extension ----
 
     @Test
     fun `modMeta is registered as its own top-level extension`() {
@@ -390,9 +364,7 @@ class MindustryModExtensionTest {
         assertTrue(project.extensions.getByType(ModMeta::class.java).name == "Lazy")
     }
 
-    // =========================================================================
-    //  useHJson (build sub-config)
-    // =========================================================================
+    // ---- useHJson (build sub-config) ----
 
     @Test
     fun `useHJson defaults to false`() {
@@ -409,9 +381,7 @@ class MindustryModExtensionTest {
         assertTrue(config.useHJson.get())
     }
 
-    // =========================================================================
-    //  the four sub-configs are reachable through their DSL blocks
-    // =========================================================================
+    // ---- the four sub-configs are reachable through their DSL blocks ----
 
     @Test
     fun `root extension exposes download run build and debug sub-configs`() {

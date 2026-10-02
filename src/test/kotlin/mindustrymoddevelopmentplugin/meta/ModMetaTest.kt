@@ -9,9 +9,7 @@ import org.junit.jupiter.api.assertThrows
 
 class ModMetaTest {
 
-    // =========================================================================
-    //  toHJson
-    // =========================================================================
+    // ---- toHJson ----
 
     @Test
     fun `toHJson outputs name`() {
@@ -93,9 +91,7 @@ class ModMetaTest {
         val hjson = info.toHJson()
         assertTrue(hjson.contains("java: false"))
     }
-    // =========================================================================
-    //  toJson
-    // =========================================================================
+    // ---- toJson ----
 
     @Test
     fun `toJson outputs name`() {
@@ -143,9 +139,7 @@ class ModMetaTest {
         assertTrue(json.contains("\"name\": \"test\\\"mod\\\\\""))
     }
 
-    // =========================================================================
-    //  Bug3 regression: standard JSON (no leading commas)
-    // =========================================================================
+    // ---- Bug3 regression: standard JSON (no leading commas) ----
 
     @Test
     fun `toJson has no leading commas`() {
@@ -171,9 +165,7 @@ class ModMetaTest {
         }
     }
 
-    // =========================================================================
-    //  Bug4 regression: toHJson escapes values containing triple quotes
-    // =========================================================================
+    // ---- Bug4 regression: toHJson escapes values containing triple quotes ----
 
     @Test
     fun `toHJson escapes triple quotes in values`() {
@@ -183,9 +175,7 @@ class ModMetaTest {
         assertTrue(hjson.contains("name: 'a\\'\\'\\'b'"), "Triple quotes must be escaped: $hjson")
     }
 
-    // =========================================================================
-    //  internalName — matches the derivation rule of the engine's cleanup()
-    // =========================================================================
+    // ---- internalName — matches the derivation rule of the engine's cleanup() ----
 
     @Test
     fun `internalName lowercases name and replaces spaces with hyphens`() {
@@ -211,9 +201,7 @@ class ModMetaTest {
         assertTrue(!hjson.contains("internalName"), "internalName is engine-derived, not a mod.hjson key: $hjson")
     }
 
-    // =========================================================================
-    //  minGameVersion — upstream is a String, so the output must be quoted
-    // =========================================================================
+    // ---- minGameVersion — upstream is a String, so the output must be quoted ----
 
     @Test
     fun `minGameVersion is emitted as a quoted string`() {
@@ -236,9 +224,7 @@ class ModMetaTest {
         assertTrue(!meta.toJson().contains("minGameVersion"))
     }
 
-    // =========================================================================
-    //  textureScale — the Kotlin property is camelCase, but the file key keeps upstream's texturescale
-    // =========================================================================
+    // ---- textureScale — the Kotlin property is camelCase, but the file key keeps upstreams texturescale ----
 
     @Test
     fun `textureScale keeps the upstream texturescale file key`() {
@@ -258,9 +244,7 @@ class ModMetaTest {
         assertTrue(!meta.toJson().contains("texturescale"))
     }
 
-    // =========================================================================
-    //  dependencies / softDependencies — support whole-list assignment and +=
-    // =========================================================================
+    // ---- dependencies / softDependencies — support whole-list assignment and += ----
 
     @Test
     fun `dependencies accepts whole-list assignment`() {
@@ -285,9 +269,7 @@ class ModMetaTest {
         assertTrue(meta.dependencies == listOf("a", "b"), "got ${meta.dependencies}")
     }
 
-    // =========================================================================
-    //  inputSnapshot (task fingerprint)
-    // =========================================================================
+    // ---- inputSnapshot (task fingerprint) ----
 
     @Test
     fun `the fingerprint cannot be forged with a separator inside a value`() {
@@ -299,9 +281,7 @@ class ModMetaTest {
         assertTrue(first.inputSnapshot() != second.inputSnapshot())
     }
 
-    // =========================================================================
-    //  locale independence
-    // =========================================================================
+    // ---- locale independence ----
 
     @Test
     fun `texturescale is written with a dot regardless of the default locale`() {
@@ -320,9 +300,7 @@ class ModMetaTest {
         }
     }
 
-    // =========================================================================
-    //  fillMissingFrom — back-fill from an existing mod file
-    // =========================================================================
+    // ---- fillMissingFrom — back-fill from an existing mod file ----
 
     private val existingMetaFile = """
         name: '''file-mod'''
@@ -392,9 +370,7 @@ class ModMetaTest {
         assertTrue(meta.dependencies.isEmpty())
     }
 
-    // =========================================================================
-    //  inputSnapshot — the Gradle task input fingerprint must cover every mutable field
-    // =========================================================================
+    // ---- inputSnapshot — the Gradle task input fingerprint must cover every mutable field ----
 
     /** Produce a value different from the default for one field; fail the test outright on an uncovered type. */
     private fun distinctValueFor(type: KType): Any {
@@ -438,9 +414,7 @@ class ModMetaTest {
         assertThrows<IllegalStateException> { ModMeta().toHJson() }
     }
 
-    // =========================================================================
-    //  escaping (the engine silently drops a mod it cannot parse)
-    // =========================================================================
+    // ---- escaping (the engine silently drops a mod it cannot parse) ----
 
     @Test
     fun `hjson escapes a value that contains a single quote`() {

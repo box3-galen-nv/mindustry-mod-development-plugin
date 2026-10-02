@@ -18,9 +18,7 @@ class ModFileReaderTest {
 
     private fun create(name: String) = tempDir.resolve(name).toFile().also { it.writeText("name: '''x'''\n") }
 
-    // =========================================================================
-    //  Metadata file discovery (the engine's 4 file names)
-    // =========================================================================
+    // ---- Metadata file discovery (the engine's 4 file names) ----
 
     @Test
     fun `recognizes all four engine metadata file names`() {
@@ -60,9 +58,7 @@ class ModFileReaderTest {
         assertTrue(ModFileReader.existingFiles(tempDir.toFile()).isEmpty())
     }
 
-    // =========================================================================
-    //  Strings
-    // =========================================================================
+    // ---- Strings ----
 
     @Test
     fun `reads triple quoted hjson value`() {
@@ -165,9 +161,7 @@ class ModFileReaderTest {
         assertTrue(ModFileReader.readString("", "name") == null)
     }
 
-    // =========================================================================
-    //  Booleans / floats
-    // =========================================================================
+    // ---- Booleans / floats ----
 
     @Test
     fun `reads booleans`() {
@@ -194,9 +188,7 @@ class ModFileReaderTest {
         assertTrue(ModFileReader.readFloat("texturescale: big\n", "texturescale") == null)
     }
 
-    // =========================================================================
-    //  Arrays
-    // =========================================================================
+    // ---- Arrays ----
 
     @Test
     fun `reads inline string arrays`() {
@@ -244,9 +236,7 @@ class ModFileReaderTest {
         assertTrue(ModFileReader.readStringList(text, "dependencies") == listOf("b"), "got ${ModFileReader.readStringList(text, "dependencies")}")
     }
 
-    // =========================================================================
-    //  JSON escapes are decoded, not stripped (the engine decodes them)
-    // =========================================================================
+    // ---- JSON escapes are decoded, not stripped (the engine decodes them) ----
 
     @Test
     fun `json escapes in a value are decoded`() {

@@ -131,9 +131,11 @@ internal object ModFileReader {
             while (i < t.length) {
                 val c = t[i]
                 if (c == '\\' && i + 1 < t.length) {
-                    // Escapes have to be decoded, not stripped: the engine decodes them, so a file with
-                    // "\u6d4b\u8bd5" for a display name used to be read back as "u6d4bu8bd5" during
-                    // metadata back-fill.
+                    /*
+                    Escapes have to be decoded, not stripped: the engine decodes them, so a file with
+                    "\u6d4b\u8bd5" for a display name used to be read back as "u6d4bu8bd5" during
+                    metadata back-fill.
+                    */
                     val next = t[i + 1]
                     when {
                         next == 'n' -> body.append('\n')

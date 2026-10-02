@@ -24,9 +24,7 @@ class MindustryModPluginIntegrationTest {
 
     private val rootDir: File get() = testProjectDir.toFile()
 
-    // =========================================================================
-    //  game data dir (run.gameDataDir)
-    // =========================================================================
+    // ---- game data dir (run.gameDataDir) ----
 
     /**
      * The `download { }` body for a test that must never, ever reach the network.
@@ -79,7 +77,7 @@ class MindustryModPluginIntegrationTest {
 
     @Test
     fun `gameDataDir decides where the mods are deployed`() {
-        // mindustryModsDir is gone: the path is always <gameDataDir>/mods.
+        // The mindustryModsDir setting is gone: the path is always <gameDataDir>/mods.
         writeDataDirProject("147", rootRun = "gameDataDir = file(\"custom-data\")")
 
         val result = runner().withArguments("clearMods").build()
@@ -172,7 +170,7 @@ class MindustryModPluginIntegrationTest {
 
     @Test
     fun `clean does not delete the project data dir`() {
-        // data/ lives next to build/, not inside it: wiping the game's saves and settings with a
+        // The data/ directory lives next to build/, not inside it: wiping the game's saves and settings with a
         // routine `clean` would be data loss.
         writeDataDirProject("147")
         val cleared = runner().withArguments("clearMods").build()
@@ -209,9 +207,7 @@ class MindustryModPluginIntegrationTest {
         )
     }
 
-    // =========================================================================
-    //  downloadMindustry (the plugin's own downloader)
-    // =========================================================================
+    // ---- downloadMindustry (the plugin's own downloader) ----
 
     @Test
     fun `single project mode deploys the mod into the game data dir`() {
@@ -324,9 +320,7 @@ class MindustryModPluginIntegrationTest {
         assertTrue(third.task(":downloadMindustry")?.outcome == TaskOutcome.UP_TO_DATE, third.output)
     }
 
-    // =========================================================================
-    //  runMindustry and packaging: no dependency by default
-    // =========================================================================
+    // ---- runMindustry and packaging: no dependency by default ----
 
     /** Root + one mod subproject; [rootRun] is the root's `run { }` body. */
     private fun writeMultiProjectFixture(rootRun: String) {
@@ -378,9 +372,7 @@ class MindustryModPluginIntegrationTest {
         assertTrue(result.output.contains(":sub:deploy"), "the build script's dependency must apply:\n${result.output}")
     }
 
-    // =========================================================================
-    //  Helpers
-    // =========================================================================
+    // ---- Helpers ----
 
     private fun write(
         path: String,
@@ -426,15 +418,15 @@ class MindustryModPluginIntegrationTest {
         repositories { mavenCentral() }
     """.trimIndent()
 
-    // =========================================================================
-    //  d8 process handling
-    // =========================================================================
+    // ---- d8 process handling ----
 
     @Test
     fun `jarAndroid survives a d8 that writes more than a pipe buffer`() {
-        // 20000 lines is far beyond the ~32-64 KiB pipe buffer. Reading the pipe only after waitFor()
-        // deadlocked the child, and the build sat there until d8TimeoutMinutes; it is pinned to one
-        // minute here so a regression fails instead of hanging the suite for 30.
+        /*
+        20000 lines is far beyond the ~32-64 KiB pipe buffer. Reading the pipe only after waitFor()
+        deadlocked the child, and the build sat there until d8TimeoutMinutes; it is pinned to one
+        minute here so a regression fails instead of hanging the suite for 30.
+        */
         fakeAndroidSdk(chattyD8 = true)
         write("settings.gradle.kts", """rootProject.name = "test"""")
         write("build.gradle.kts", androidBuildScript("d8TimeoutMinutes = 1"))
@@ -448,15 +440,15 @@ class MindustryModPluginIntegrationTest {
         )
     }
 
-    // =========================================================================
-    //  game API resolution (the release-asset route)
-    // =========================================================================
+    // ---- game API resolution (the release-asset route) ----
 
     @Test
     fun `the game API coordinate resolves without any repository declared`() {
-        // pluginSnippet() declares no repositories on purpose. Corrupting the asset name inside
-        // MindustryApi makes the compiling fixtures fail, so the whole suite exercises the route; this
-        // case pins the coordinate the compile classpath asks for.
+        /*
+        The pluginSnippet() fixture declares no repositories on purpose. Corrupting the asset name inside
+        MindustryApi makes the compiling fixtures fail, so the whole suite exercises the route; this
+        case pins the coordinate the compile classpath asks for.
+        */
         write("settings.gradle.kts", """rootProject.name = "test"""")
         write("build.gradle.kts", """
             ${pluginSnippet()}
@@ -473,9 +465,7 @@ class MindustryModPluginIntegrationTest {
         )
     }
 
-    // =========================================================================
-    //  IDEA run configurations (.run/) — the DSL -> file wiring
-    // =========================================================================
+    // ---- IDEA run configurations (.run/) — the DSL -> file wiring ----
 
     /** The generated Remote JVM Debug configuration, or null when it was not written. */
     private fun attachConfig(): String? =
@@ -661,9 +651,7 @@ class MindustryModPluginIntegrationTest {
         assertTrue(!off.output.contains("Debugger socket on port"), off.output)
     }
 
-    // =========================================================================
-    //  Source roots (IDE breakpoints + what actually gets compiled)
-    // =========================================================================
+    // ---- Source roots (IDE breakpoints + what actually gets compiled) ----
 
     @Test
     fun `kotlin sources compile from the project root`() {
@@ -757,9 +745,7 @@ class MindustryModPluginIntegrationTest {
         assertTrue(entries.contains("moda/JavaMod.class"), "the Java source must be compiled into the jar: $entries")
     }
 
-    // =========================================================================
-    //  Single-project mode  (bug fix regression)
-    // =========================================================================
+    // ---- Single-project mode  (bug fix regression) ----
 
     @Test
     fun `single project mode creates jar deploy and buildModHJson tasks`() {
@@ -776,9 +762,7 @@ class MindustryModPluginIntegrationTest {
         assertTrue(result.output.contains("buildModHJson"), "Missing buildModHJson task")
     }
 
-    // =========================================================================
-    //  Root project tasks
-    // =========================================================================
+    // ---- Root project tasks ----
 
     @Test
     fun `root project creates downloadMindustry and runMindustry tasks`() {
@@ -792,9 +776,7 @@ class MindustryModPluginIntegrationTest {
         assertTrue(result.output.contains("runMindustry"), "Missing runMindustry")
     }
 
-    // =========================================================================
-    //  Multi-project mode
-    // =========================================================================
+    // ---- Multi-project mode ----
 
     @Test
     fun `subproject has downloadMindustry and runMindustry tasks`() {
@@ -860,9 +842,7 @@ class MindustryModPluginIntegrationTest {
         assertTrue(!result.output.contains("\ndeploy"), "Root should not have deploy")
     }
 
-    // =========================================================================
-    //  Error: missing mod metadata
-    // =========================================================================
+    // ---- Error: missing mod metadata ----
 
     @Test
     fun `jar fails with helpful error when no mod metadata`() {
@@ -880,9 +860,7 @@ class MindustryModPluginIntegrationTest {
         assertTrue(result.output.contains("No mod metadata found"), "Expected helpful error, got: ${result.output.take(500)}")
     }
 
-    // =========================================================================
-    //  Kotlin is optional — Java-only mods
-    // =========================================================================
+    // ---- Kotlin is optional — Java-only mods ----
 
     @Test
     fun `java only mod has no kotlin plugin and still builds`() {
@@ -928,9 +906,7 @@ class MindustryModPluginIntegrationTest {
         )
     }
 
-    // =========================================================================
-    //  KotlinCompile include filter  (regression guard for **/*.kt)
-    // =========================================================================
+    // ---- KotlinCompile include filter  (regression guard for **/*.kt) ----
 
     @Test
     fun `compileKotlin does not compile gradle kts files`() {
@@ -946,9 +922,7 @@ class MindustryModPluginIntegrationTest {
         assertTrue(result.task(":compileKotlin")?.outcome == TaskOutcome.SUCCESS, "compileKotlin should succeed; .kts files must not be compiled as sources")
     }
 
-    // =========================================================================
-    //  Icon renaming + warning
-    // =========================================================================
+    // ---- Icon renaming + warning ----
 
     private fun iconBuildScript(iconFile: String) = """
         ${pluginSnippet()}
@@ -1110,9 +1084,7 @@ class MindustryModPluginIntegrationTest {
         assertTrue(entries.contains("icon.png"), "Expected icon.png in jar, got $entries")
         assertTrue(result.output.contains("not a PNG image"))
     }
-    // =========================================================================
-    //  Download file name validation
-    // =========================================================================
+    // ---- Download file name validation ----
 
     /**
      * Build script with the download and run sub-configs.
@@ -1172,9 +1144,7 @@ class MindustryModPluginIntegrationTest {
         val result = tasksResult()
         assertTrue(result.output.contains("CJK characters"))
     }
-    // =========================================================================
-    //  enableRunLogging (debug sub-config)
-    // =========================================================================
+    // ---- enableRunLogging (debug sub-config) ----
 
     @Test
     fun `enableRunLogging false configures runMindustry without error`() {
@@ -1184,9 +1154,7 @@ class MindustryModPluginIntegrationTest {
         assertTrue(result.task(":tasks")?.outcome == TaskOutcome.SUCCESS)
         assertTrue(result.output.contains("runMindustry"))
     }
-    // =========================================================================
-    //  build.androidSdkDir (jarAndroid SDK path)
-    // =========================================================================
+    // ---- build.androidSdkDir (jarAndroid SDK path) ----
 
     @Test
     fun `build androidSdkDir configures jarAndroid without error`() {
@@ -1238,9 +1206,7 @@ class MindustryModPluginIntegrationTest {
         assertTrue(result.output.contains("jarAndroid"))
     }
 
-    // =========================================================================
-    //  Metadata back-fill (generateModMeta)
-    // =========================================================================
+    // ---- Metadata back-fill (generateModMeta) ----
 
     @Test
     fun `generateModMeta back-fills fields from existing mod hjson`() {
@@ -1315,9 +1281,7 @@ class MindustryModPluginIntegrationTest {
         assertTrue(text.contains("\"hidden\": true"), "hidden should be inherited:\n$text")
     }
 
-    // =========================================================================
-    //  mod.json alone must still be packed into the jar
-    // =========================================================================
+    // ---- mod.json alone must still be packed into the jar ----
 
     @Test
     fun `jar includes mod json when only mod json exists`() {
@@ -1335,9 +1299,7 @@ class MindustryModPluginIntegrationTest {
         assertTrue(entries.contains("mod.json"), "mod.json must be packed even when useHJson says mod.hjson; got $entries")
     }
 
-    // =========================================================================
-    //  plugin.json / plugin.hjson are also engine metadata file names
-    // =========================================================================
+    // ---- plugin.json / plugin.hjson are also engine metadata file names ----
 
     @Test
     fun `project with only plugin hjson counts as a mod project`() {
@@ -1381,9 +1343,7 @@ class MindustryModPluginIntegrationTest {
         assertTrue(text.contains("author: '''json-author'''"), "mod.json has engine priority over mod.hjson:\n$text")
     }
 
-    // =========================================================================
-    //  clearMods safety: never delete when the name cannot be resolved
-    // =========================================================================
+    // ---- clearMods safety: never delete when the name cannot be resolved ----
 
     private fun writeMultiProjectWithMod(modBuildScript: String) {
         write("settings.gradle.kts", """
@@ -1432,9 +1392,7 @@ class MindustryModPluginIntegrationTest {
         assertTrue(result.output.contains("Skipping mod cleanup"), "应给出跳过清理的警告:\n${result.output}")
     }
 
-    // =========================================================================
-    //  jarAndroid input declaration: a changed jar must not leave a stale dex
-    // =========================================================================
+    // ---- jarAndroid input declaration: a changed jar must not leave a stale dex ----
 
     @Test
     fun `jarAndroid is up to date when nothing changed and re-runs after a change`() {
@@ -1461,9 +1419,7 @@ class MindustryModPluginIntegrationTest {
         )
     }
 
-    // =========================================================================
-    //  deploy keeps intermediate artifacts → jar / jarAndroid stay incremental
-    // =========================================================================
+    // ---- deploy keeps intermediate artifacts → jar / jarAndroid stay incremental ----
 
     @Test
     fun `deploy keeps intermediate jars so jar and jarAndroid stay up to date`() {
@@ -1491,9 +1447,7 @@ class MindustryModPluginIntegrationTest {
         )
     }
 
-    // =========================================================================
-    //  buildModHJson up-to-date checks
-    // =========================================================================
+    // ---- buildModHJson up-to-date checks ----
 
     @Test
     fun `buildModHJson is skipped when generateModMeta is false`() {
@@ -1593,13 +1547,11 @@ class MindustryModPluginIntegrationTest {
         assertTrue(generated.readText().contains("\"name\": \"test-mod\""), generated.readText())
     }
 
-    // =========================================================================
-    //  Android SDK auto-download (download.androidSdkAutoDownload)
-    // =========================================================================
+    // ---- Android SDK auto-download (download.androidSdkAutoDownload) ----
 
     @Test
     fun `androidSdkExtraArgs reach the sdkmanager command line`() {
-        // sdkmanager has no repository-URL flag, so a mirror has to be passed as a proxy. This proves
+        // The sdkmanager tool has no repository-URL flag, so a mirror has to be passed as a proxy. This proves
         // the DSL value really lands in the child process arguments, not just in the task inputs.
         val toolsUrl = fakeCommandLineToolsArchive()
         write("settings.gradle.kts", """rootProject.name = "test"""")
@@ -1702,7 +1654,7 @@ class MindustryModPluginIntegrationTest {
         rootDir.resolve("sdk").mkdirs()
 
         val result = failResult("jarAndroid")
-        // d8 is resolved before android.jar now (dexing no longer depends on the SDK), so an empty SDK
+        // The d8 executable is resolved before android.jar now (dexing no longer depends on the SDK), so an empty SDK
         // directory reports the missing d8 first. Either way it fails loudly rather than downloading.
         assertTrue(
             result.output.contains("No d8 command found") || result.output.contains("No android.jar found"),
@@ -1886,9 +1838,11 @@ class MindustryModPluginIntegrationTest {
 
     @Test
     fun `the built jar carries the mod metadata`() {
-        // A jar without its metadata is not a mod the game can load, and nothing in this suite looked inside
-        // the jar. The format is pinned so the artifact name is deterministic: the default carries
-        // {build_count}, and inspecting a stale file under a hard-coded name is how a phantom bug was chased.
+        /*
+        A jar without its metadata is not a mod the game can load, and nothing in this suite looked inside
+        the jar. The format is pinned so the artifact name is deterministic: the default carries
+        {build_count}, and inspecting a stale file under a hard-coded name is how a phantom bug was chased.
+        */
         write("settings.gradle.kts", """rootProject.name = "test"""")
         write("build.gradle.kts", """
             ${pluginSnippet()}

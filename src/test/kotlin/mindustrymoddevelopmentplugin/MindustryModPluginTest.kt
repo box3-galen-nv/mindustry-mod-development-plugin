@@ -32,7 +32,7 @@ class MindustryModPluginTest {
         }
         // Triggers configureModule(), which is where repositories and dependencies are added.
         project.extensions.getByType(ModMeta::class.java).name = "repo-probe"
-        // evaluate() lives on the internal Project interface; ProjectBuilder only exposes Project.
+        // The evaluate() method lives on the internal Project interface; ProjectBuilder only exposes Project.
         (project as ProjectInternal).evaluate()
         return project
     }
@@ -69,7 +69,7 @@ class MindustryModPluginTest {
     @Test
     fun `mod sources never include build caches or a project-local gradle home`() {
         val projectDir = File("/work/mod")
-        // modSourceExcludes is a member of the plugin class, so ask an applied plugin for it.
+        // The modSourceExcludes function is a member of the plugin class, so ask an applied plugin for it.
         val pluginProject = ProjectBuilder.builder().build()
         pluginProject.plugins.apply(MindustryModPlugin::class.java)
         val plugin = pluginProject.plugins.findPlugin(MindustryModPlugin::class.java)!!
@@ -104,7 +104,7 @@ class MindustryModPluginTest {
 
     @Test
     fun `a version without a mod system is rejected`() {
-        // v92 shipped only server plugins; the mod system starts at v97.
+        // The v92 release shipped only server plugins; the mod system starts at v97.
         val error = assertThrows(GradleException::class.java) { modProject("92") }
         assertTrue(
             error.chainMessages().contains("v97"),

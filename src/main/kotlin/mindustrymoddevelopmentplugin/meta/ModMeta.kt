@@ -28,7 +28,7 @@ import java.util.Locale
  */
 open class ModMeta {
 
-    // -- Identity ---------------------------------------------------------------
+    // ---- Identity ----
 
     /**
      * Mod identifier — the only **Required** field.
@@ -73,7 +73,7 @@ open class ModMeta {
      */
     var description: String = ""
 
-    // -- Entry point and version -------------------------------------------------
+    // ---- Entry point and version ----
 
     /**
      * Fully qualified main class.
@@ -109,7 +109,7 @@ open class ModMeta {
      */
     var version: String = ""
 
-    // -- Compatibility -----------------------------------------------------------
+    // ---- Compatibility ----
 
     /**
      * Minimum compatible game build, e.g. `"146"` or `"158.1"`.
@@ -134,7 +134,7 @@ open class ModMeta {
      */
     var legacyCompatible: Boolean = false
 
-    // -- Flags -------------------------------------------------------------------
+    // ---- Flags ----
 
     /**
      * Whether to hide the mod from the mod browser.
@@ -211,7 +211,7 @@ open class ModMeta {
     val internalName: String
         get() = name.lowercase(Locale.ROOT).replace(" ", "-")
 
-    // -- Dependencies ------------------------------------------------------------
+    // ---- Dependencies ----
 
     /**
      * Hard dependency names.
@@ -243,7 +243,7 @@ open class ModMeta {
      */
     var softDependencies: List<String> = emptyList()
 
-    // -- Back-fill from an existing metadata file --------------------------------
+    // ---- Back-fill from an existing metadata file ----
 
     /**
      * Back-fills every field that is still at its default value from the text of an
@@ -310,12 +310,14 @@ open class ModMeta {
         name, displayName, subtitle, author, description, main, repo, version,
         minGameVersion, legacyCompatible, hidden, java, iosCompatible, textureScale,
         pregenerated, contentOrder?.toList(), dependencies, softDependencies,
-        // Length-prefixed rather than NUL-separated: a field value could otherwise contain the
-        // separator and make two different metadata sets produce the same fingerprint, which would
-        // leave buildModHJson UP-TO-DATE with a stale file.
+        /*
+        Length-prefixed rather than NUL-separated: a field value could otherwise contain the
+        separator and make two different metadata sets produce the same fingerprint, which would
+        leave buildModHJson UP-TO-DATE with a stale file.
+        */
     ).joinToString("") { value -> value.toString().let { "${it.length}:$it" } }
 
-    // -- Serialization -----------------------------------------------------------
+    // ---- Serialization ----
 
     /**
      * Serializes this metadata to HJSON, the format of `mod.hjson`.
@@ -343,10 +345,12 @@ open class ModMeta {
          * single-quoted literal with `\` and `'` escaped.
          */
         fun quote(s: String): String =
-            // A triple-quoted literal ends at the first `'''`, so *any* single quote forces the escaped
-            // form: a value ending in one (say `abc'`) would otherwise become `'''abc''''`, which the
-            // engine reads as `abc` plus junk. Mods.load() swallows that failure, so the mod would just
-            // never show up in the game.
+            /*
+            A triple-quoted literal ends at the first `'''`, so *any* single quote forces the escaped
+            form: a value ending in one (say `abc'`) would otherwise become `'''abc''''`, which the
+            engine reads as `abc` plus junk. Mods.load() swallows that failure, so the mod would just
+            never show up in the game.
+            */
             if (s.contains('\'')) {
                 "'${s.replace("\\", "\\\\").replace("'", "\\'")}'"
             } else {
@@ -374,9 +378,11 @@ open class ModMeta {
             appendLine("hidden: $hidden")
             appendLine("java: $java")
             if (iosCompatible) appendLine("iosCompatible: true")
-            // Float.toString() is locale-independent (always a '.'); never rewrite this with
-            //     String.format without Locale.ROOT, or a German locale would emit "2,5" and the game
-            //     would silently fail to read the metadata.
+            /*
+            Float.toString() is locale-independent (always a '.'); never rewrite this with
+            String.format without Locale.ROOT, or a German locale would emit "2,5" and the game
+            would silently fail to read the metadata.
+            */
             if (textureScale != 1.0f) appendLine("texturescale: $textureScale")
             if (pregenerated) appendLine("pregenerated: true")
             val co = contentOrder; if (!co.isNullOrEmpty()) appendLine("contentOrder: ${co.format()}")

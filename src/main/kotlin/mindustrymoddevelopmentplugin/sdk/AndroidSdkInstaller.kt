@@ -1,6 +1,5 @@
 package mindustrymoddevelopmentplugin.sdk
 
-import mindustrymoddevelopmentplugin.dsl.MindustryDownloadConfig
 import java.io.File
 import java.io.FileOutputStream
 import java.net.URI
@@ -29,7 +28,7 @@ internal object AndroidSdkInstaller {
     private const val TOOLS_STAGING_DIR = "cmdline-tools-staging"
     private const val TOOLS_DIR = "cmdline-tools/latest"
 
-    /** Lock file serialising installs into one SDK directory. */
+    /** Lock file serializing installs into one SDK directory. */
     private const val INSTALL_LOCK_NAME = ".install.lock"
 
     /** Directory inside the SDK that holds sdkmanager's own cache/preferences. */
@@ -139,9 +138,11 @@ internal object AndroidSdkInstaller {
             )
         }
 
-        // Two `jarAndroid` tasks can run at the same time (`--parallel`, or one per mod project) and share
-        // this SDK directory: both would write the same `.part`, both would stage the same tree, and both
-        // would use the same sdkmanager cache. One lock per SDK directory serialises the whole install.
+        /*
+        Two `jarAndroid` tasks can run at the same time (`--parallel`, or one per mod project) and share
+        this SDK directory: both would write the same `.part`, both would stage the same tree, and both
+        would use the same sdkmanager cache. One lock per SDK directory serializes the whole installation.
+        */
         sdkRoot.mkdirs()
         FileChannel.open(
             File(sdkRoot, INSTALL_LOCK_NAME).toPath(),
@@ -185,10 +186,12 @@ internal object AndroidSdkInstaller {
         runSdkManager(sdkRoot, listOf("--licenses") + extraArgs, timeoutMinutes, log, answerLicences = true)
         runSdkManager(sdkRoot, packages + extraArgs, timeoutMinutes, log, answerLicences = false)
 
-        // Only packages the plugin can actually verify may be reported missing. Specs such as
-        // `platform-tools` or `cmdline-tools;latest` are deliberately delegated to sdkmanager
-        // (`isPackagePresent` treats them as satisfied), so an empty `missing` must not fall through
-        // to "no platforms/build-tools" — that reported a successful installation as a failure.
+        /*
+        Only packages the plugin can actually verify may be reported missing. Specs such as
+        `platform-tools` or `cmdline-tools;latest` are deliberately delegated to sdkmanager
+        (`isPackagePresent` treats them as satisfied), so an empty `missing` must not fall through
+        to "no platforms/build-tools" — that reported a successful installation as a failure.
+        */
         val missing = packages.filterNot { isPackagePresent(sdkRoot, it) }
         if (missing.isNotEmpty()) {
             throw GradleException(
@@ -232,8 +235,6 @@ internal object AndroidSdkInstaller {
             throw GradleException("Failed to download the Android command-line tools from $toolsUrl: ${it.message}")
         }
 
-        // Only a complete copy reaches the real name, so an interrupted download leaves a `.part`
-        // file instead of an archive the next run would try to unpack.
         Files.move(part.toPath(), target.toPath(), StandardCopyOption.REPLACE_EXISTING)
         log("Downloaded ${target.length() / 1024 / 1024} MB to ${target.name}")
         return target
@@ -279,9 +280,11 @@ internal object AndroidSdkInstaller {
             ?: throw GradleException("Unexpected command-line tools archive layout in ${zip.name}")
         File(sdkRoot, "cmdline-tools").mkdirs()
         val destination = File(sdkRoot, TOOLS_DIR)
-        // Move the old tools aside instead of deleting them first: if this archive turns out to be broken
-        // (a mirror serving an HTML page, a full disk), the previous working sdkmanager can be put back
-        // instead of leaving a half-unpacked tree that the next build would happily use.
+        /*
+        Move the old tools aside instead of deleting them first: if this archive turns out to be broken
+        (a mirror serving an HTML page, a full disk), the previous working sdkmanager can be put back
+        instead of leaving a half-unpacked tree that the next build would happily use.
+        */
         val previous = File(sdkRoot, "cmdline-tools/.previous")
         previous.deleteRecursively()
         if (destination.exists() && !destination.renameTo(previous)) {
@@ -328,10 +331,12 @@ internal object AndroidSdkInstaller {
         // The sdkmanager launcher is a Java program: point it at the JVM running this build.
         builder.environment()["JAVA_HOME"] = System.getProperty("java.home")
 
-        // The sdkmanager cache lives in $ANDROID_USER_HOME/cache (default ~/.android/cache), and
-        // a read-only path there is reported as a *download* failure — read-only HOME happens in
-        // containers and sandboxes. Point it inside the SDK instead, which we just proved
-        // writable; an explicit value from the environment wins.
+        /*
+        The sdkmanager cache lives in $ANDROID_USER_HOME/cache (default ~/.android/cache), and
+        a read-only path there is reported as a *download* failure — read-only HOME happens in
+        containers and sandboxes. Point it inside the SDK instead, which we just proved
+        writable; an explicit value from the environment wins.
+        */
         val environment = builder.environment()
         if (environment["ANDROID_USER_HOME"].isNullOrBlank()) {
             val userHome = File(sdkRoot, ANDROID_USER_HOME_DIR).also { it.mkdirs() }
@@ -342,11 +347,13 @@ internal object AndroidSdkInstaller {
 
         val process = builder.start()
 
-        // sdkmanager can exit before it reads a single answer (a broken manifest, an unusable SDK root),
-        // and writing to its stdin then raises "Broken pipe". Letting that exception escape replaced the
-        // output that says what actually went wrong — the reported failure was "Broken pipe" instead of
-        // the hint naming the setting to change. It is timing-dependent, which is why it surfaced on one
-        // CI job and not another.
+        /*
+        The sdkmanager process can exit before it reads a single answer (a broken manifest, an SDK root
+        and writing to its stdin then raises "Broken pipe". Letting that exception escape replaced the
+        output that says what actually went wrong — the reported failure was "Broken pipe" instead of
+        the hint naming the setting to change. It is timing-dependent, which is why it surfaced on one
+        CI job and not another.
+        */
         runCatching {
             if (answerLicences) {
                 // Answer every prompt with "y" instead of shelling out to `yes`, which does not

@@ -9,7 +9,6 @@ import java.util.concurrent.TimeUnit
 import org.gradle.api.file.FileCollection
 import org.gradle.api.logging.Logger
 import org.gradle.api.GradleException
-import org.gradle.api.Project
 import org.gradle.api.Task
 import org.gradle.api.file.DirectoryProperty
 
@@ -65,15 +64,17 @@ internal object JarAndroidTask {
         task.dependsOn("jar")
 
         // Declare the output at configuration time so Gradle can do up-to-date
-        //     checks and deploy can reference it safely.
+        // checks and deploy can reference it safely.
         val androidOutput = File(libsDir, "$androidName.jar")
         val jarInput = File(libsDir, "$jarName.jar")
         task.outputs.file(androidOutput)
 
-        // Declare inputs too, otherwise a stale dex survives a code change (a task
-        //     with outputs but no inputs reports UP-TO-DATE no matter what it consumes).
-        //     The SDK is only fingerprinted by path: hashing a whole SDK costs far more
-        //     than re-running d8.
+        /*
+        Declare inputs too, otherwise a stale dex survives a code change (a task
+        with outputs but no inputs reports UP-TO-DATE no matter what it consumes).
+        The SDK is only fingerprinted by path: hashing a whole SDK costs far more
+        than re-running d8.
+        */
         task.inputs.files(jarInput)
         task.inputs.property("d8Args", options.d8Args)
         task.inputs.property("d8TimeoutMinutes", options.d8TimeoutMinutes)
@@ -87,9 +88,11 @@ internal object JarAndroidTask {
         task.inputs.property("d8Command", options.d8Command ?: emptyList<String>())
 
         task.doLast { _: Task ->
-            // A d8 that already exists — configured, on the PATH, or inside an installed SDK — means this
-            // task must not touch the SDK at all. Only when there is none anywhere does the SDK get
-            // installed, which is what keeps dexing possible on Termux (no SDK, `pkg install d8` instead).
+            /*
+            A d8 that already exists — configured, on the PATH, or inside an installed SDK — means this
+            task must not touch the SDK at all. Only when there is none anywhere does the SDK get
+            installed, which is what keeps dexing possible on Termux (no SDK, `pkg install d8` instead).
+            */
             val sdkRoot = if (options.d8Command != null) {
                 // Standalone d8: still look for an installed SDK, but only to borrow its android.jar —
                 // never to install one, which is what makes this usable on Termux.
@@ -104,7 +107,7 @@ internal object JarAndroidTask {
                     "download.androidSdkAutoDownload."
                 )
 
-            // d8 desugars better with the platform on its classpath, but it is not required: on Termux
+            // The platform on the classpath makes desugaring better, but it is not required: on Termux
             // there is usually no SDK at all and dexing still works.
             val androidJar = sdkRoot?.let { AndroidSdk.findAndroidJar(it) }
             if (androidJar == null) {
@@ -133,10 +136,12 @@ internal object JarAndroidTask {
             val pb = ProcessBuilder(args).directory(libsDir).redirectErrorStream(true)
             val proc = pb.start()
 
-            // Drain the pipe while d8 runs. redirectErrorStream(true) merges stderr into stdout, and a
-            // child that fills the pipe buffer (~32-64 KiB) blocks on write while this thread blocks in
-            // waitFor — a deadlock that only ends with the timeout, reported as "d8 timed out". The same
-            // pattern is used by AndroidSdkInstaller.runSdkManager.
+            /*
+            Drain the pipe while d8 runs. redirectErrorStream(true) merges stderr into stdout, and a
+            child that fills the pipe buffer (~32-64 KiB) blocks on write while this thread blocks in
+            waitFor — a deadlock that only ends with the timeout, reported as "d8 timed out". The same
+            pattern is used by AndroidSdkInstaller.runSdkManager.
+            */
             val output = StringBuilder()
             val drain = Thread {
                 runCatching { proc.inputStream.bufferedReader().forEachLine { output.appendLine(it) } }
@@ -145,7 +150,7 @@ internal object JarAndroidTask {
             drain.start()
 
             // Wait with a timeout so a hung d8 process cannot hang the build forever.
-            //     Configurable via build.d8TimeoutMinutes (minutes).
+            // Configurable via build.d8TimeoutMinutes (minutes).
             val finished = proc.waitFor(options.d8TimeoutMinutes, TimeUnit.MINUTES)
             drain.join(options.d8DrainJoinMillis)
 

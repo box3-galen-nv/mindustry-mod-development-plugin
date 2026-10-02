@@ -27,7 +27,7 @@ internal object GenerateIdeaRunConfigsTask {
      * The task has no dependencies and nothing depends on it: run it explicitly
      * (`./gradlew generateIdeaRunConfigs`) once, and again after changing the port.
      *
-     * Nothing depends on it and it depends on nothing, so it only runs when asked for; a build script
+     * Nothing depends on it, and it depends on nothing, so it only runs when asked for; a build script
      * that never wants it can say `tasks.named("generateIdeaRunConfigs") { enabled = false }`.
      */
     fun configure(
@@ -40,10 +40,10 @@ internal object GenerateIdeaRunConfigsTask {
         task.group = "mindustry"
         task.description = "Writes the .run/ IDEA run configurations (game + attach debugger)."
 
-        // Inputs: the port, the two task names and the XML template revision. Outputs: the generated files.
         task.inputs.property("taskName", taskName)
         task.inputs.property("packagingTask", packagingTask)
         task.inputs.property("debugPort", debugPort)
+        // Changing the generated XML means a new revision, which must re-run the task.
         task.inputs.property("templateRevision", IdeaRunConfigs.TEMPLATE_REVISION)
         val rootProjectDir = project.rootProject.projectDir
         task.outputs.files(IdeaRunConfigs.files(rootProjectDir))

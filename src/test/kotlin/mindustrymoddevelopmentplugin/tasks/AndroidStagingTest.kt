@@ -29,8 +29,6 @@ class AndroidStagingTest {
         RunMindustryTask.configureAndroid(
             task,
             mods = listOf(RunMindustryTask.ModArtifact("mod", File(libs, "mod.jar"), ":deploy")),
-            project = project,
-            useDeployRun = true,
             deployTag = "mm-deploy",
             options = RunMindustryTask.AndroidOptions(
                 appId = "io.anuke.mindustry",

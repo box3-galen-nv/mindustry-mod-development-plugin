@@ -48,7 +48,7 @@ abstract class MindustryDownloadConfig {
      */
     abstract val mindustryDownloadFileName: Property<String>
 
-    // -- Android SDK download (consumed by jarAndroid) -----------------------------
+    // ---- Android SDK download (consumed by jarAndroid) ----
 
     /**
      * Whether `jarAndroid` installs an Android SDK when none is usable.
@@ -82,7 +82,7 @@ abstract class MindustryDownloadConfig {
     abstract val androidSdkDownloadPackages: ListProperty<String>
 
     /**
-     * Extra command-line flags for `sdkmanager`, appended to both the licence and the package run.
+     * Extra command-line flags for `sdkmanager`, appended to both the license and the package run.
      * Default is empty.
      *
      * `sdkmanager` has no option for pointing at another *repository*: it always reads Google's own
@@ -119,7 +119,7 @@ abstract class MindustryDownloadConfig {
     companion object {
 
         /** Default value of [mindustryDownloadVersion]. */
-        // v147 is the first release that understands -Dmindustry.data.dir, so the default works with
+        // The v147 release is the first that understands -Dmindustry.data.dir, so the default works with
         // run.gameDataDir instead of only warning about an unsupported version.
         const val DEFAULT_VERSION = "147"
 
@@ -138,7 +138,7 @@ abstract class MindustryDownloadConfig {
         /** Default value of [androidSdkDownloadTimeoutMinutes], in minutes. */
         const val DEFAULT_ANDROID_SDK_DOWNLOAD_TIMEOUT_MINUTES = 30L
 
-        // -- Command-line tools URL --------------------------------------------------
+        // ---- Command-line tools URL ----
 
         /** Build number of the official command-line tools that [commandLineToolsUrl] pins. */
         private const val COMMAND_LINE_TOOLS_BUILD = "13114758"

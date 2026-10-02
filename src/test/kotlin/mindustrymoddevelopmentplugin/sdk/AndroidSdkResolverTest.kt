@@ -23,9 +23,7 @@ class AndroidSdkResolverTest {
     private fun sdkDir(name: String): File =
         userHome.resolve(name).also { it.mkdirs() }
 
-    // =========================================================================
-    //  configured androidSdkDir
-    // =========================================================================
+    // ---- configured androidSdkDir ----
 
     @Test
     fun `configured dir wins over env`() {
@@ -76,9 +74,7 @@ class AndroidSdkResolverTest {
         assertTrue(e.message!!.contains("build.androidSdkDir"), "error should say where it came from")
     }
 
-    // =========================================================================
-    //  env vars
-    // =========================================================================
+    // ---- env vars ----
 
     @Test
     fun `ANDROID_HOME used when configured is null`() {
@@ -103,9 +99,7 @@ class AndroidSdkResolverTest {
         )
         assertTrue(result == sdkRoot)
     }
-    // =========================================================================
-    //  user home fallback + failure
-    // =========================================================================
+    // ---- user home fallback + failure ----
 
     @Test
     fun `falls back to mac user home location`() {
@@ -131,9 +125,7 @@ class AndroidSdkResolverTest {
         assertTrue(e.message!!.contains("Tried"), "error should list tried paths")
         assertTrue(e.message!!.contains("Library/Android/sdk"))
     }
-    // =========================================================================
-    //  defaultAndroidSdkDirs per OS
-    // =========================================================================
+    // ---- defaultAndroidSdkDirs per OS ----
 
     @Test
     fun `default mac sdk path`() {
@@ -155,9 +147,7 @@ class AndroidSdkResolverTest {
         assertTrue(dirs == listOf(File(userHome, "Android/Sdk"), File(userHome, ".android/sdk")))
     }
 
-    // =========================================================================
-    //  SDK version-number ordering (sdkVersionParts / compareSdkVersions)
-    // =========================================================================
+    // ---- SDK version-number ordering (sdkVersionParts / compareSdkVersions) ----
 
     @Test
     fun `sdkVersionParts parses trailing version numbers`() {
@@ -176,9 +166,7 @@ class AndroidSdkResolverTest {
         assertTrue(AndroidSdk.compareSdkVersions(File("build-tools/34.0.0"), File("build-tools/9.0.0")) > 0)
     }
 
-    // =========================================================================
-    //  findAndroidSdkDir — the non-throwing variant used before auto-install
-    // =========================================================================
+    // ---- findAndroidSdkDir — the non-throwing variant used before auto-install ----
 
     @Test
     fun `findAndroidSdkDir returns null instead of throwing when nothing exists`() {
@@ -201,7 +189,7 @@ class AndroidSdkResolverTest {
             ) == envHome,
             "the env SDK must be found even though androidSdkDir is stale",
         )
-        // Nothing anywhere: null is the "no SDK yet" answer the auto-install path relies on.
+        // Nothing anywhere: null is the "no SDK yet" answer the auto-installation path relies on.
         assertTrue(AndroidSdk.findAndroidSdkDir(configured = missing, env = emptyMap(), userHome = userHome) == null)
     }
 
@@ -229,9 +217,7 @@ class AndroidSdkResolverTest {
         assertTrue(AndroidSdk.findAndroidSdkDir(null, mapOf("ANDROID_SDK_ROOT" to rootHome.path), userHome) == rootHome)
     }
 
-    // =========================================================================
-    //  resolveD8: dexing without an Android SDK
-    // =========================================================================
+    // ---- resolveD8: dexing without an Android SDK ----
 
     private fun executable(dir: File, name: String): File =
         File(dir, name).also {

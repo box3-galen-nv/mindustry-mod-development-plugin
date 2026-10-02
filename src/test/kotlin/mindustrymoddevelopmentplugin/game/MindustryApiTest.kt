@@ -51,7 +51,7 @@ class MindustryApiTest {
 
     @Test
     fun `versions without a mod system have no route`() {
-        // v92 only had server plugins; v97 is the first release with mod.json / plugin.json.
+        // The v92 release only had server plugins; v97 is the first release with mod.json / plugin.json.
         assertNull(MindustryApi.routeFor("96"))
         assertNull(MindustryApi.routeFor("92"))
         assertNull(MindustryApi.routeFor("40"))
@@ -71,9 +71,11 @@ class MindustryApiTest {
 
     @Test
     fun `data dir property needs v147`() {
-        // The JVM property exists from v147; the v126 environment variable is deliberately not used.
-        // `latest`/`be` track newer releases, and an unparseable value is left to the download URL to
-        // reject, so it must not fail here as well.
+        /*
+        The JVM property exists from v147; the v126 environment variable is deliberately not used.
+        `latest`/`be` track newer releases, and an unparseable value is left to the download URL to
+        reject, so it must not fail here as well.
+        */
         for (version in listOf("147", "v147", "155.3", "160.5", "latest", "be", "banana")) {
             assertTrue(MindustryApi.supportsDataDir(version), "'$version' must be accepted")
         }

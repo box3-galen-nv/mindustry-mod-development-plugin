@@ -41,9 +41,6 @@ internal object JarTask {
         task.archiveFileName.set("$jarName.jar")
         task.duplicatesStrategy = DuplicatesStrategy.EXCLUDE
 
-        // Validate that mod metadata exists before building.
-        //     If both mindustryMod { } DSL and mod.hjson / mod.json are absent,
-        //     throw a helpful error showing the minimal required configuration.
         task.doFirst {
             if (metaName.isBlank() && !hasModFile) {
                 throw GradleException(
@@ -62,18 +59,21 @@ internal object JarTask {
             }
         }
 
-        // Merge runtime classpath dependencies into the jar.
-        //     Directories are kept as-is; jar/zips are exploded.
-        // Resolved while configuring: the configuration cache cannot serialize a provider that reaches
-        //     back into the project, and FileTrees themselves serialize fine.
+        /*
+        Merge runtime classpath dependencies into the jar.
+        Directories are kept as-is; jar/zips are exploded.
+        Resolved while configuring: the configuration cache cannot serialize a provider that reaches
+        back into the project, and FileTrees themselves serialize fine.
+        */
         val runtimeTrees = project.configurations.getByName("runtimeClasspath").files.map { file ->
             if (file.isDirectory) file else project.zipTree(file)
         }
         task.from(runtimeTrees)
 
-        // Icon — Mindustry only reads icon.png or preview.png from the jar root.
-        //     If the source is not one of these two names, rename it to icon.png.
-        //     Non-PNG files named icon.* / preview.* trigger a warning.
+        /*
+        Icon — Mindustry only reads icon.png or preview.png from the jar root, so another PNG is
+        renamed to icon.png while a non-PNG icon.* / preview.* merely earns a warning.
+        */
         ext.icon.orNull?.asFile?.takeIf { it.exists() }?.let { iconFile ->
             val fileName = iconFile.name
             val baseName = iconFile.nameWithoutExtension.lowercase()
@@ -110,26 +110,25 @@ internal object JarTask {
         }
 
         // Mod metadata file — either generated in build/ (generateMeta = true)
-        //     or picked up from the project root (any of the engine's four file names).
+        // or picked up from the project root (any of the engine's four file names).
         if (generateMeta) {
-            val buildModFile = configuredBuildModFile
-            task.from(buildModFile.parentFile) { spec: CopySpec -> spec.include(buildModFile.name) }
+            task.from(configuredBuildModFile.parentFile) { spec: CopySpec -> spec.include(configuredBuildModFile.name) }
         } else if (hasModFile) {
-            // Include whichever metadata files exist — a project may ship only
-            //     mod.json or plugin.hjson while useHJson (and thus modFileName) says
-            //     mod.hjson.
+            /*
+            Include whichever metadata files exist — a project may ship only
+            mod.json or plugin.hjson while useHJson (and thus modFileName) says
+            mod.hjson.
+            */
             task.from(project.projectDir) { spec: CopySpec -> spec.include(ModFileReader.FILE_NAMES) }
         }
 
         // Asset directories — each configured directory is included recursively.
-        //     Missing directories are silently skipped (isDirectory check).
         ext.assets.forEach { dir ->
             if (dir.isDirectory) {
                 task.from(dir) { spec: CopySpec -> spec.include("**") }
             }
         }
 
-        // Increment the build counter file after jar is built.
         task.doLast { _: Task ->
             ArtifactNaming.incrementBuildCounter(counterFile)
         }

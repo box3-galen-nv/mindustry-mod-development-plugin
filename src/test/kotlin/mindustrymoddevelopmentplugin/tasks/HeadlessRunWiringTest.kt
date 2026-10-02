@@ -28,7 +28,6 @@ class HeadlessRunWiringTest {
             downloadPath = File(project.projectDir, "game.jar"),
             modsDir = File(work, "config/mods"),
             project = project,
-            useDeployRun = true,
             deployTag = "mm-deploy",
             dataDir = File(project.projectDir, "desktop-data"),
             headless = RunMindustryTask.HeadlessOptions(jar = jar, workingDir = work),
@@ -59,7 +58,6 @@ class HeadlessRunWiringTest {
             downloadPath = File(project.projectDir, "game.jar"),
             modsDir = File(dataDir, "mods"),
             project = project,
-            useDeployRun = true,
             deployTag = "mm-deploy",
             dataDir = dataDir,
         )

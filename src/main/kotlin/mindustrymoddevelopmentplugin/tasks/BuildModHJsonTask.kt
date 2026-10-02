@@ -33,21 +33,23 @@ internal object BuildModHJsonTask {
         buildModFile: File,
     ) {
         // With generateModMeta = false there is nothing to generate, so skip the task
-        //     entirely instead of running an empty action on every build.
+        // entirely instead of running an empty action on every build.
         task.onlyIf { generateMeta }
 
         // Declare inputs and outputs so the task is UP-TO-DATE when nothing changed.
-        //     Inputs = DSL field snapshot + existing metadata files (the back-fill source).
+        // Inputs = DSL field snapshot + existing metadata files (the back-fill source).
         task.inputs.property("modMeta", meta.inputSnapshot())
         task.inputs.property("useHJson", useHJson)
         task.inputs.files(ModFileReader.existingFiles(projectDir))
         task.outputs.file(buildModFile)
 
         task.doLast { _: Task ->
-            // Back-fill fields that are still at their defaults from an existing metadata file in the
-            //     project root (the engine's four names, in its own priority), so enabling generateModMeta
-            //     does not silently drop metadata that is only present in the file. DSL values always win
-            //     (see ModMeta.fillMissingFrom).
+            /*
+            Back-fill fields that are still at their defaults from an existing metadata file in the
+            project root (the engine's four names, in its own priority), so enabling generateModMeta
+            does not silently drop metadata that is only present in the file. DSL values always win
+            (see ModMeta.fillMissingFrom).
+            */
             ModFileReader.existingFiles(projectDir).firstOrNull()?.let { file ->
                 runCatching { file.readText() }
                     .onSuccess { meta.fillMissingFrom(it) }

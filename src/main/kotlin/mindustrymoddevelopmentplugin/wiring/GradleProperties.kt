@@ -9,7 +9,6 @@ import org.gradle.api.Project
  * the DSL in both directions — so `-Px=false` has to mean off rather than merely "set".
  */
 internal object GradleProperties {
-
     /**
      * Reads a boolean project property (`-Pname=value`, `gradle.properties`, `-D`).
      *

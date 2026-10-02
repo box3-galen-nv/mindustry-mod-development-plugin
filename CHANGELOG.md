@@ -3,7 +3,7 @@
 ## 1.0.1
 
 - declares that the configuration cache is not supported, which the Plugin Portal requires of every
-  plugin and which 1.0.0 was submitted without. No behaviour change.
+  plugin and which 1.0.0 was submitted without. No behavior change.
 
 ## 1.0.0
 

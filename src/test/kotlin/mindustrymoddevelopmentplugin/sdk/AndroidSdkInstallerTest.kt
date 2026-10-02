@@ -86,9 +86,7 @@ class AndroidSdkInstallerTest {
         )
     }
 
-    // =========================================================================
-    //  needsInstall
-    // =========================================================================
+    // ---- needsInstall ----
 
     @Test
     fun `needsInstall is true for a null missing or empty directory`() {
@@ -149,11 +147,11 @@ class AndroidSdkInstallerTest {
         File(sdk, "build-tools/34.0.0").mkdirs()
         File(sdk, "build-tools/34.0.0/d8").writeText("x")
 
-        // The sdkmanager tool owns these; guessing would trigger an install on every build.
+        // The sdkmanager tool owns these; guessing would trigger an installation on every build.
         assertTrue(!AndroidSdkInstaller.needsInstall(sdk, listOf("platform-tools")))
         assertTrue(!AndroidSdkInstaller.needsInstall(sdk, listOf("cmdline-tools;latest")))
         assertTrue(!AndroidSdkInstaller.needsInstall(sdk, listOf("platforms;android-30", "platform-tools")))
-        // A malformed spec must not trigger an install either.
+        // A malformed spec must not trigger an installation either.
         assertTrue(!AndroidSdkInstaller.needsInstall(sdk, listOf("platforms")))
         assertTrue(!AndroidSdkInstaller.needsInstall(sdk, listOf("platforms;")))
     }
@@ -190,7 +188,7 @@ class AndroidSdkInstallerTest {
 
     @Test
     fun `install succeeds when only unverifiable packages are requested`() {
-        // `platform-tools` cannot be checked locally (isPackagePresent returns true), so an install
+        // `platform-tools` cannot be checked locally (isPackagePresent returns true), so an installation
         // that created nothing must not be reported as "does not provide: any platforms/build-tools".
         val url = toolsArchive("#!/bin/sh\nwhile read -r line; do :; done\nexit 0\n")
         val sdk = File(root, "sdk-unverifiable")
@@ -200,9 +198,7 @@ class AndroidSdkInstallerTest {
         assertTrue(File(sdk, "cmdline-tools/latest/bin/sdkmanager").isFile, "the tools must still be unpacked")
     }
 
-    // =========================================================================
-    //  resolveOrInstallSdk (what jarAndroid runs before d8)
-    // =========================================================================
+    // ---- resolveOrInstallSdk (what jarAndroid runs before d8) ----
 
     @Test
     fun `jarAndroid reuses an sdk that satisfies the requested packages`() {
@@ -215,7 +211,7 @@ class AndroidSdkInstallerTest {
         val project = ProjectBuilder.builder().build()
         val result = JarAndroidTask.resolveOrInstallSdk(jarAndroidOptions(
                 project, sdk,
-                // A URL that cannot work: if an install were attempted, this test would fail.
+                // A URL that cannot work: if an installation were attempted, this test would fail.
                 packages = listOf("platforms;android-34", "build-tools;34.0.0"),
             ),
             project.logger,
@@ -271,9 +267,7 @@ class AndroidSdkInstallerTest {
         assertTrue(!File(sdk, "cmdline-tools").exists(), "nothing may be downloaded")
     }
 
-    // =========================================================================
-    //  extra sdkmanager flags (download.androidSdkExtraArgs)
-    // =========================================================================
+    // ---- extra sdkmanager flags (download.androidSdkExtraArgs) ----
 
     @Test
     fun `extra flags reach both sdkmanager invocations`() {
@@ -292,7 +286,7 @@ class AndroidSdkInstallerTest {
 
         val calls = record.readLines()
         assertTrue(calls.size == 2, "one call per invocation, got: $calls")
-        // The licence run needs the proxy too: it is the first thing that downloads the manifest.
+        // The license run needs the proxy too: it is the first thing that downloads the manifest.
         calls.forEach { call ->
             assertTrue(call.contains("--proxy_host=mirror.example"), call)
             assertTrue(call.contains("--proxy_port=80"), call)
@@ -325,7 +319,6 @@ class AndroidSdkInstallerTest {
         assertTrue(!sdk.exists(), "nothing may be created before the arguments are validated")
     }
 
-    // =========================================================================
     @Test
     fun `a windows sdk with only d8_bat counts as complete`() {
         // Windows build-tools install `d8.bat` (the jar sits under lib/), so a file check for `d8` alone
@@ -339,8 +332,7 @@ class AndroidSdkInstallerTest {
         assertTrue(!AndroidSdkInstaller.needsInstall(sdk), "a d8.bat build-tools is usable")
     }
 
-    //  install
-    // =========================================================================
+    // ---- install ----
 
     @Test
     fun `install downloads unpacks accepts licences and installs packages`() {
@@ -355,14 +347,14 @@ class AndroidSdkInstallerTest {
         assertTrue(sdkManager.isFile, "sdkmanager should be unpacked to cmdline-tools/latest/bin")
         assertTrue(sdkManager.canExecute(), "sdkmanager must be executable (zip extraction drops the bit)")
 
-        // Licence step first, then the requested packages, both with --sdk_root.
+        // License step first, then the requested packages, both with --sdk_root.
         val calls = record.readLines()
         assertTrue(calls.size == 2, "expected licences + install, got $calls")
         assertTrue(calls[0].contains("--licenses"), "first call must accept licences: ${calls[0]}")
         assertTrue(calls[0].contains("--sdk_root=${sdk.absolutePath}"), "got ${calls[0]}")
         assertTrue(calls[1].contains("platforms;android-30"), "second call must install packages: ${calls[1]}")
 
-        // The download is cached, and the SDK is usable afterwards.
+        // The download is cached, and the SDK is usable afterward.
         assertTrue(File(sdk, "commandlinetools.zip").let { !it.exists() }, "the zip should be deleted after unpacking")
         assertTrue(!AndroidSdkInstaller.needsInstall(sdk), "SDK should be complete after install")
     }
@@ -404,9 +396,11 @@ class AndroidSdkInstallerTest {
 
     @Test
     fun `a broken pipe does not replace the sdkmanager output`() {
-        // `exec 0<&-` closes the script's stdin, so the plugin's licence answers definitely hit a closed
-        // pipe. That IOException used to escape and become the reported failure, hiding the output that
-        // says what to fix — it was timing-dependent, so CI saw it on one job and not another.
+        /*
+        `exec 0<&-` closes the script's stdin, so the plugin's license answers definitely hit a closed
+        pipe. That IOException used to escape and become the reported failure, hiding the output that
+        says what to fix — it was timing-dependent, so CI saw it on one job and not another.
+        */
         val url = toolsArchive(
             """
             #!/bin/sh

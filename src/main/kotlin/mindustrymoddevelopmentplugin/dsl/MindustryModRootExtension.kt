@@ -27,7 +27,7 @@ import org.gradle.api.tasks.Nested
  */
 abstract class MindustryModRootExtension {
 
-    // -- Compile API version -----------------------------------------------------
+    // ---- Compile API version ----
 
     /**
      * Mindustry version to compile against: `"159"`, `"v159"`, `"latest"` or `"be"`.
@@ -47,7 +47,7 @@ abstract class MindustryModRootExtension {
      */
     abstract val mindustryApiVersion: Property<String>
 
-    // -- Download config (child) -------------------------------------------------
+    // ---- Download config (child) ----
 
     /** Download config (created automatically by Gradle). */
     @get:Nested
@@ -58,7 +58,7 @@ abstract class MindustryModRootExtension {
         action.execute(download)
     }
 
-    // -- Build config (child) ----------------------------------------------------
+    // ---- Build config (child) ----
 
     /** Build config (created automatically by Gradle). */
     @get:Nested
@@ -69,7 +69,7 @@ abstract class MindustryModRootExtension {
         action.execute(build)
     }
 
-    // -- Run config (child) ------------------------------------------------------
+    // ---- Run config (child) ----
 
     /** Run config (created automatically by Gradle). */
     @get:Nested
@@ -80,7 +80,7 @@ abstract class MindustryModRootExtension {
         action.execute(run)
     }
 
-    // -- Debug config (child) ----------------------------------------------------
+    // ---- Debug config (child) ----
 
     /** Logging and debugging config (created automatically by Gradle). */
     @get:Nested

@@ -14,7 +14,7 @@ import org.gradle.api.Task
 /**
  * Configures `clearMods`, which removes the jars this plugin deployed earlier.
  *
- * It only ever deletes files that carry the deploy tag *and* match the name pattern derived from
+ * It only ever deletes files that carry the deployment tag *and* match the name pattern derived from
  * [mindustrymoddevelopmentplugin.dsl.MindustryBuildConfig.format] — see [deployedJarPattern] — and it deletes
  * nothing at all when the mod name cannot be resolved.
  */
@@ -112,7 +112,7 @@ internal object ClearModsTask {
      */
     private fun resolveModName(project: Project, ext: MindustryModExtension): String? {
         val dslName = ext.modMeta.name
-        if (!dslName.isNullOrBlank()) return dslName
+        if (dslName.isNotBlank()) return dslName
         return ModFileReader.readMetaValue(project.projectDir, "name")
     }
 
@@ -137,7 +137,7 @@ internal object ClearModsTask {
         format: String,
         suffixes: List<String> = emptyList(),
     ): Regex {
-        val builder = StringBuilder("^").append(Regex.escape("[" + deployTag + "]"))
+        val builder = StringBuilder("^").append(Regex.escape("[$deployTag]"))
         var index = 0
         while (index < format.length) {
             val placeholder = FORMAT_PLACEHOLDERS.firstOrNull { format.startsWith(it, index) }
@@ -164,9 +164,11 @@ internal object ClearModsTask {
             }
             index += placeholder.length
         }
-        // Always anchor the end. Without it, the default format (`{name}-{version}.{build_count}`) also
-        // matched a different mod whose name merely starts with ours, so mod `my` deleted
-        // `[mm-deploy]my-2nd-1.0.3.jar`. The configured suffixes are the only allowed tail.
+        /*
+        Always anchor the end. Without it, the default format (`{name}-{version}.{build_count}`) also
+        matched a different mod whose name merely starts with ours, so mod `my` deleted
+        `[mm-deploy]my-2nd-1.0.3.jar`. The configured suffixes are the only allowed tail.
+        */
         val tails = (suffixes.filter { it.isNotEmpty() } + listOf(""))
             .joinToString("|") { Regex.escape(it) }
         builder.append("(?:$tails)?\\.jar$")

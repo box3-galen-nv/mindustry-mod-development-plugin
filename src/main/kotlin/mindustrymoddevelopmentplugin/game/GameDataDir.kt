@@ -13,7 +13,7 @@ import org.gradle.api.GradleException
  */
 internal object GameDataDir {
 
-    /** Engine variable that overrides the data directory; honoured by the game since v126. */
+    /** Engine variable that overrides the data directory; honored by the game since v126. */
     const val ENV_VAR = "MINDUSTRY_DATA_DIR"
 
     /** The Android client's application id; the BE build rewrites it to `io.anuke.mindustry.be`. */
@@ -45,9 +45,11 @@ internal object GameDataDir {
     ): File {
         if (!env.isNullOrBlank()) return File(env)
 
-        // Android comes first because `os.name` says "Linux" there too, which would give the desktop path.
-        // The client ignores both MINDUSTRY_DATA_DIR and -Dmindustry.data.dir: AndroidLauncher sets the data
-        // directory to getExternalFilesDir(null) unconditionally, and that is this path.
+        /*
+        Android comes first because `os.name` says "Linux" there too, which would give the desktop path.
+        The client ignores both MINDUSTRY_DATA_DIR and -Dmindustry.data.dir: AndroidLauncher sets the data
+        directory to getExternalFilesDir(null) unconditionally, and that is this path.
+        */
         if (hostPlatform == HostPlatform.Android) return androidDataDir(androidAppId)
 
         val os = osName.lowercase()

@@ -52,9 +52,7 @@ class DownloadMindustryTaskTest {
         return server to "http://127.0.0.1:${server.address.port}"
     }
 
-    // =========================================================================
-    //  releaseUrl
-    // =========================================================================
+    // ---- releaseUrl ----
 
     @Test
     fun `release url accepts a plain version a v prefix and latest`() {
@@ -83,9 +81,7 @@ class DownloadMindustryTaskTest {
         assertTrue(error.message!!.contains("mindustryDownloadVersion"), error.message!!)
     }
 
-    // =========================================================================
-    //  download
-    // =========================================================================
+    // ---- download ----
 
     @Test
     fun `a file url is copied and verified`() {

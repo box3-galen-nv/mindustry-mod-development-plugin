@@ -26,9 +26,11 @@ internal object DeployTask {
         project: Project,
         androidSdkAvailable: Boolean,
     ) {
-        // A desktop-only build must not be blocked by a missing Android SDK: `jarAndroid` is only wired in
-        // when there is an SDK to use (or auto-download is on), and otherwise the merge says so and ships
-        // the desktop jar alone.
+        /*
+        A desktop-only build must not be blocked by a missing Android SDK: `jarAndroid` is only wired in
+        when there is an SDK to use (or auto-download is on), and otherwise the merge says so and ships
+        the desktop jar alone.
+        */
         task.dependsOn("jar")
         if (androidSdkAvailable) task.dependsOn("jarAndroid")
         if (!androidSdkAvailable) {
@@ -41,10 +43,10 @@ internal object DeployTask {
         }
         task.duplicatesStrategy = DuplicatesStrategy.EXCLUDE
 
-        // Merge desktop + Android jars. Sources are declared lazily so the actual
-        //     files (produced by the jar/jarAndroid tasks) are read at execution time.
-        //     Declared here (configuration time), not in doFirst, so the output name
-        //     and inputs are known for up-to-date checks.
+        /*
+        Declared here, not in doFirst, so the output name and inputs are known while Gradle checks
+        up-to-date state; the provider keeps the jar files themselves resolved at execution time.
+        */
         val jarFile = File(libsDir, "$jarName.jar")
         val androidFile = File(libsDir, "$androidName.jar")
         task.from(project.provider {
@@ -53,9 +55,5 @@ internal object DeployTask {
                 androidFile.takeIf { it.exists() }?.let { project.zipTree(it) })
         })
         task.archiveFileName.set("$deployName.jar")
-
-        // The intermediate desktop / Android jars are kept on purpose: deleting them
-        //     (the declared outputs of jar / jarAndroid) forces a full re-package on every
-        //     deploy, which defeats up-to-date checks for both tasks.
     }
 }
