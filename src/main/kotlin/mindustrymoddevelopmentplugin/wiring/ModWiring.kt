@@ -80,11 +80,7 @@ internal object ModWiring {
         }
 
         project.tasks.named("jar", Jar::class.java) { task ->
-            JarTask.configure(
-                task, names.jar, ext, hasModFile, project, generateMeta, modFileName,
-                metaName = ext.modMeta.name,
-                counterFile = ArtifactNaming.buildCounterFile(project.projectDir),
-            )
+            JarTask.configure(task, names.jar, ext, hasModFile, project, modFileName)
         }
 
         project.tasks.register("jarAndroid") { task ->
@@ -113,7 +109,7 @@ internal object ModWiring {
             task.group = MindustryModPlugin.MINDUSTRY_GROUP
             task.description = "Merges the desktop and Android jars into the one the game loads."
             DeployTask.configure(
-                task, libsDir, names.jar, names.android, names.deploy, project,
+                task, names.jar, names.android, names.deploy, project,
                 // Auto-download means jarAndroid will provide an SDK itself; otherwise one has to be found.
                 androidSdkAvailable = jarAndroidOptions(project, rootExt).let { options ->
                     options.autoDownloadSdk || AndroidSdk.findAndroidSdkDir(options.androidSdkDir?.orNull?.asFile) != null

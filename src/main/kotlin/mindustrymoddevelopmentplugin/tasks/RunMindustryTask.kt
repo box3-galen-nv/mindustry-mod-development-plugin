@@ -4,6 +4,7 @@ import mindustrymoddevelopmentplugin.logging.RunLogging
 import org.gradle.api.provider.Provider
 import java.io.BufferedOutputStream
 import java.io.File
+import mindustrymoddevelopmentplugin.dsl.MindustryDebugConfig
 import java.io.FileOutputStream
 import java.io.OutputStream
 import java.text.SimpleDateFormat
@@ -184,8 +185,8 @@ internal object RunMindustryTask {
         modsDir: File,
         project: Project,
         deployTag: String,
-        maxLogFiles: Int = 25,
-        enableRunLogging: Boolean = true,
+        maxLogFiles: Int = MindustryDebugConfig.DEFAULT_MAX_LOG_FILES,
+        enableRunLogging: Boolean = MindustryDebugConfig.DEFAULT_ENABLE_RUN_LOGGING,
         dataDir: File? = null,
         debug: DebugOptions = DebugOptions(),
         headless: HeadlessOptions? = null,

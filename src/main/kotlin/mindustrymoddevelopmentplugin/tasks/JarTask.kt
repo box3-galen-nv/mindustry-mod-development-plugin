@@ -3,7 +3,6 @@ package mindustrymoddevelopmentplugin.tasks
 import mindustrymoddevelopmentplugin.meta.ArtifactNaming
 import mindustrymoddevelopmentplugin.dsl.MindustryModExtension
 import mindustrymoddevelopmentplugin.meta.ModFileReader
-import java.io.File
 import org.gradle.api.GradleException
 import org.gradle.api.Project
 import org.gradle.api.Task
@@ -19,8 +18,13 @@ import org.gradle.api.tasks.bundling.Jar
  */
 internal object JarTask {
     /**
-     * Package the desktop jar: merge runtimeClasspath dependencies + icon + README
-     * + LICENSE + mod.hjson / mod.json + assets directories
+     * Package the desktop jar: merge runtimeClasspath dependencies + icon + README + LICENSE + the metadata
+     * file + the configured asset directories.
+     *
+     * [jarName] is resolved once per build because it reads the build counter, so every task that names an
+     * artifact has to agree on it. [modFileName] comes from the root project's `build { }` block, not from
+     * the mod extension this receives, so re-deriving it here would duplicate that rule. [hasModFile] is the
+     * same fact `configureModuleIfMod` uses to decide whether a root project is a mod at all.
      */
     fun configure(
         task: Jar,
@@ -28,14 +32,16 @@ internal object JarTask {
         ext: MindustryModExtension,
         hasModFile: Boolean,
         project: Project,
-        generateMeta: Boolean,
         modFileName: String,
-        /** Only used in the error message, and captured so the action need not touch the project. */
-        projectName: String = project.name,
-        /** The mod's resolved name and its counter file: plain values, so the action holds no project. */
-        metaName: String,
-        counterFile: File,
     ) {
+        // Everything the actions below close over is derived here, while configuring, so they hold only
+        // plain values: the configuration cache refuses to serialize an action that reaches back into the
+        // project or into the extension that owns one.
+        val projectName = project.name
+        val metaName = ext.modMeta.name
+        val counterFile = ArtifactNaming.buildCounterFile(project.projectDir)
+        val generateMeta = ext.generateModMeta.get()
+
         val configuredBuildModFile = project.layout.buildDirectory.file(modFileName).get().asFile
         task.dependsOn("buildModHJson")
         task.archiveFileName.set("$jarName.jar")

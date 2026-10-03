@@ -15,11 +15,9 @@ internal object DeployTask {
     /**
      * Wires merging of the desktop ([jarName]) and Android ([androidName]) jars into [deployName].
      *
-     * @param libsDir directory holding the three jars
      */
     fun configure(
         task: Jar,
-        libsDir: File,
         jarName: String,
         androidName: String,
         deployName: String,
@@ -42,6 +40,10 @@ internal object DeployTask {
             }
         }
         task.duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+
+        // Derived here rather than passed in: the function already receives the project, and the two
+        // jars it merges sit in the same build/libs directory the other packaging tasks write.
+        val libsDir = project.layout.buildDirectory.dir("libs").get().asFile
 
         /*
         Declared here, not in doFirst, so the output name and inputs are known while Gradle checks
