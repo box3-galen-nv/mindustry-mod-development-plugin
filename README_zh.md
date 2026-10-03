@@ -162,6 +162,8 @@ project/
 
 `jarAndroid` 需要一个含 `platforms/<ver>/android.jar` 与 `build-tools/<ver>/d8` 的 SDK。当解析出的 SDK 无法满足 `download.androidSdkDownloadPackages` 时（缺失、为空、或**版本不对**），插件会从配置的渠道下载官方命令行工具，并用 `sdkmanager` 安装这些包（license 自动接受）。安装位置：配置了 `build.androidSdkDir` 就用它（目录不存在或为空则创建），否则用 `run.androidSdkInstallDir`；在别处（如 `ANDROID_HOME`）找到的 SDK 只按原样使用，绝不改动。它默认关闭，构建不会擅自开始几百 MB 的下载：需要时用 `download { androidSdkAutoDownload = true }` 开启，否则 `jarAndroid` 会像以前一样报错并列出所有探测过的位置。用镜像时：命令行工具由 `androidSdkDownloadUrl` 指定为镜像地址；`sdkmanager` 的包下载则需要在 `androidSdkExtraArgs` 里指定镜像作为 HTTP 代理（`--proxy=http --proxy_host=<host> --proxy_port=<port>`，镜像只支持 HTTP 时再加 `--no_https`）—— `sdkmanager` 读的是 Google 自己的包列表，这个代理是唯一能让包下载改道的途径。 安装本身是一个独立任务 `downloadAndroidSdk`，`jarAndroid` 依赖它：可以先用 `./gradlew downloadAndroidSdk` 提前装好 SDK，包齐了之后它会报告 UP-TO-DATE。当 d8 已经可用时（配置了 `build.d8Executable`、`PATH` 上有（例如 Termux 的 `pkg install d8`）、或已安装的 SDK 里带着），该任务会被跳过，完全不会碰任何 SDK。
 
+在 Termux 上，`pkg install d8` 本身就是完整工具链，不需要存在任何 SDK：只要 d8 解析成功，`downloadAndroidSdk` 会被整体跳过，`jarAndroid` 在没有 `android.jar` 时照样能跑（只是 desugaring 不够精确，任务会告警）。若仍想拿到 `android.jar` —— 它只是 Java class 的 zip，与 CPU 架构无关 —— 设置 `download { androidSdkDownloadPlatformOnly = true }`：任务会重新运行，并且**只**安装 `platforms;*` 包，不动你已有的 d8。命令行工具里的 `sdkmanager` 是启动 Java 的 shell 脚本，而 Android 没有 `/bin/sh` 可让它的 shebang 指向，所以插件在 Termux 上会把解包出来的工具的 shebang 重写到 `$PREFIX/bin/sh`。
+
 > `sdkmanager` 会把仓库清单缓存在 `$ANDROID_USER_HOME/cache`（默认 `~/.android/cache`），该路径不可写时它会**误报成"下载失败"**（容器/沙箱里的真实坑）。除非环境已设置 `ANDROID_USER_HOME`，插件会把它重定向到 `<sdk>/.android-user`。
 
 #### 在 IDEA 中调试

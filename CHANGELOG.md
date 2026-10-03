@@ -3,6 +3,11 @@
 ## Unreleased
 
 - The Android SDK download is now its own task, `downloadAndroidSdk`, which `jarAndroid` depends on.
+- `download.androidSdkDownloadPlatformOnly` (default off) lets a Termux setup with `pkg install d8`
+  install just the platform packages, so `android.jar` can reach d8's desugaring classpath without
+  installing a build-tools over the d8 that is already there.
+- On Termux the unpacked command-line tools get their shebang rewritten to `$PREFIX/bin/sh`, because
+  Android has no `/bin/sh` and `sdkmanager` is a shell script the plugin execs directly.
   It is UP-TO-DATE while the requested packages are present, is skipped when a d8 already resolved
   (a configured one, the `PATH`, or an installed SDK), and never runs from inside `jarAndroid` itself.
 

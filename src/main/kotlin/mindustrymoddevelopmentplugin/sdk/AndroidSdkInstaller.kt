@@ -1,6 +1,7 @@
 package mindustrymoddevelopmentplugin.sdk
 
 import java.io.File
+import mindustrymoddevelopmentplugin.platform.HostPlatform
 import org.gradle.api.logging.Logger
 import java.io.FileOutputStream
 import java.net.URI
@@ -127,6 +128,11 @@ internal object AndroidSdkInstaller {
         timeoutMinutes: Long,
         log: (String) -> Unit,
         extraArgs: List<String> = emptyList(),
+        /**
+         * Termux's `$PREFIX`, when the caller is on Android: the unpacked tools' shebangs are rewritten to
+         * point at its shell. Null (the default on a desktop) leaves them alone. Injectable for tests.
+         */
+        termuxPrefix: String? = defaultTermuxPrefix(),
     ) {
         // Before anything is downloaded: a rejected flag must not cost a 140 MB download first.
         val rejected = extraArgs.filter { it.isConflictingExtraArg() }
@@ -151,7 +157,7 @@ internal object AndroidSdkInstaller {
             StandardOpenOption.WRITE,
         ).use { channel ->
             channel.lock().use {
-                installLocked(sdkRoot, toolsUrl, packages, timeoutMinutes, log, extraArgs)
+                installLocked(sdkRoot, toolsUrl, packages, timeoutMinutes, log, extraArgs, termuxPrefix)
             }
         }
     }
@@ -163,12 +169,15 @@ internal object AndroidSdkInstaller {
         timeoutMinutes: Long,
         log: (String) -> Unit,
         extraArgs: List<String>,
+        termuxPrefix: String?,
     ) {
         // Re-checked under the lock: whichever process lost the race finds the tools already unpacked.
         if (!sdkManagerFile(sdkRoot).isFile) {
             val zip = download(sdkRoot, toolsUrl, timeoutMinutes, log)
             unpack(zip, sdkRoot, log)
             zip.delete()
+            // The tools are shell scripts that exec Java, and Android has no /bin/sh for a shebang to name.
+            rewriteShebangs(sdkManagerFile(sdkRoot).parentFile, termuxPrefix, log)
         }
 
         val sdkManager = sdkManagerFile(sdkRoot)
@@ -329,7 +338,7 @@ internal object AndroidSdkInstaller {
         val builder = ProcessBuilder(command)
         builder.directory(sdkRoot)
         builder.redirectErrorStream(true)
-        // The sdkmanager launcher is a Java program: point it at the JVM running this build.
+        // The sdkmanager launcher is a shell script that runs Java: point it at this build's JVM.
         builder.environment()["JAVA_HOME"] = System.getProperty("java.home")
 
         /*
@@ -445,7 +454,11 @@ internal object AndroidSdkInstaller {
      * With auto-download off this falls back to [AndroidSdk.resolveAndroidSdkDir], which fails loudly with
      * the list of locations it probed — the behavior before auto-download existed.
      */
-    fun resolveOrInstall(options: AndroidSdkOptions, logger: Logger): File {
+    fun resolveOrInstall(
+        options: AndroidSdkOptions,
+        logger: Logger,
+        packages: List<String> = options.sdkDownloadPackages,
+    ): File {
         val configuredDir = options.androidSdkDir?.orNull?.asFile
         val existing = AndroidSdk.findAndroidSdkDir(configuredDir)
 
@@ -453,21 +466,54 @@ internal object AndroidSdkInstaller {
             return existing ?: AndroidSdk.resolveAndroidSdkDir(configuredDir)
         }
 
-        if (!needsInstall(existing, options.sdkDownloadPackages)) return existing!!
+        if (!needsInstall(existing, packages)) return existing!!
 
         val target = configuredDir ?: options.sdkInstallDir
         logger.lifecycle(
             "Android SDK missing or incomplete in '$target' — downloading the command-line tools " +
-            "and installing: ${options.sdkDownloadPackages.joinToString(", ")}"
+            "and installing: ${packages.joinToString(", ")}"
         )
         install(
             sdkRoot = target,
             toolsUrl = options.sdkDownloadUrl,
-            packages = options.sdkDownloadPackages,
+            packages = packages,
             extraArgs = options.sdkExtraArgs,
             timeoutMinutes = options.sdkDownloadTimeoutMinutes,
             log = { logger.lifecycle("[android-sdk] $it") },
         )
         return target
+    }
+
+    /** Termux's prefix when this build runs there, which is where the unpacked tools need their shell. */
+    private fun defaultTermuxPrefix(): String? =
+        if (HostPlatform.detect() == HostPlatform.Android) System.getenv("PREFIX") else null
+
+    /**
+     * Points the unpacked tools' shebangs at Termux's own shell.
+     *
+     * `runSdkManager` executes `sdkmanager` directly, so the kernel has to resolve its shebang: the official
+     * scripts name `/bin/sh`, or `/usr/bin/env bash`, and Android has neither path. Without this the install
+     * fails with an interpreter error that says nothing about the cause. Only the interpreter line changes;
+     * the script body — which is what locates the jar and runs Java — is left as it is.
+     *
+     * @param binDir the unpacked `cmdline-tools/.../bin` directory
+     * @param termuxPrefix Termux's `$PREFIX`, or null to leave the scripts untouched
+     */
+    internal fun rewriteShebangs(binDir: File?, termuxPrefix: String?, log: (String) -> Unit) {
+        if (binDir == null || termuxPrefix.isNullOrBlank() || !binDir.isDirectory) return
+        val sh = File(termuxPrefix, "bin/sh")
+        val bash = File(termuxPrefix, "bin/bash")
+        binDir.listFiles().orEmpty().filter { it.isFile }.forEach { file ->
+            val text = runCatching { file.readText() }.getOrNull() ?: return@forEach
+            if (!text.startsWith("#!")) return@forEach
+            val firstLine = text.lineSequence().first()
+            // A script that asked for bash keeps bash; anything else gets the shell Termux always ships.
+            val interpreter = if (firstLine.contains("bash") && bash.isFile) bash else sh
+            val replacement = "#!${interpreter.absolutePath}"
+            if (firstLine == replacement) return@forEach
+            file.writeText(replacement + "\n" + text.substringAfter("\n", ""))
+            file.setExecutable(true, false)
+            log("Rewrote the interpreter of ${file.name} to ${interpreter.absolutePath}")
+        }
     }
 }

@@ -212,6 +212,8 @@ JarAndroidTask.configure(
                 pathEnv = if (build?.androidSdkDir?.orNull != null) null else System.getenv("PATH"),
                 sdkRoot = null,
             ),
+            platformOnly = download?.androidSdkDownloadPlatformOnly?.get()
+                ?: MindustryDownloadConfig.DEFAULT_ANDROID_SDK_DOWNLOAD_PLATFORM_ONLY,
             autoDownloadSdk = download?.androidSdkAutoDownload?.get()
                 ?: MindustryDownloadConfig.DEFAULT_ANDROID_SDK_AUTO_DOWNLOAD,
             sdkDownloadUrl = download?.androidSdkDownloadUrl?.orNull

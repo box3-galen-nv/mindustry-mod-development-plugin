@@ -423,4 +423,43 @@ internal class AndroidSdkIntegrationTest : TestKitFixture() {
     }
 
 
+    @Test
+    fun `the platform-only switch installs the platform without build-tools`() {
+        /*
+        The Termux shape with the switch on: a standalone d8 supplies the dexer, so the SDK is wanted only
+        for android.jar. build-tools must not be installed over the d8 the user already has.
+        */
+        val d8 = fakeD8Script()
+        val toolsUrl = fakeCommandLineToolsArchive()
+        write("settings.gradle.kts", """rootProject.name = "test"""")
+        write("build.gradle.kts", """
+            ${pluginSnippet}
+            ${kotlinSnippet()}
+            mindustryModRoot {
+                mindustryApiVersion = "159"
+                build {
+                    androidSdkDir = file("sdk")
+                    d8Executable = file("${d8.name}")
+                    format = "{name}-{version}"
+                }
+                download {
+                    androidSdkAutoDownload = true
+                    androidSdkDownloadPlatformOnly = true
+                    androidSdkDownloadUrl = "$toolsUrl"
+                    androidSdkDownloadPackages = listOf("platforms;android-30", "build-tools;34.0.0")
+                }
+            }
+            mindustryMod { modMeta { name = "test-mod"; version = "1.0"; java = true } }
+        """)
+        write("src/test-mod/Mod.java", "package testmod;\npublic class Mod {}\n")
+
+        val result = runner().withArguments("downloadAndroidSdk").build()
+
+        assertTrue(result.task(":downloadAndroidSdk")?.outcome == TaskOutcome.SUCCESS, result.output)
+        val calls = rootDir.resolve("sdkmanager-calls.txt").readLines()
+        assertTrue(calls.any { it.contains("platforms;android-30") }, "the platform must be installed: $calls")
+        assertTrue(calls.none { it.contains("build-tools") }, "build-tools belong to the user's d8: $calls")
+    }
+
+
 }

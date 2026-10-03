@@ -1,11 +1,13 @@
 package mindustrymoddevelopmentplugin.sdk
 
 import java.io.File
+import kotlin.io.path.createTempDirectory
 import java.nio.file.Path
 import java.util.zip.ZipEntry
 import java.util.zip.ZipOutputStream
 import org.gradle.api.GradleException
 import org.gradle.testfixtures.ProjectBuilder
+import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
@@ -474,4 +476,41 @@ class AndroidSdkInstallerTest {
         sdkDownloadTimeoutMinutes = 5,
     )
 
+
+    // ---- rewriteShebangs (what makes the tools runnable on Termux) ----
+
+    @Test
+    fun `a termux prefix rewrites the tools' shebangs`() {
+        // The shape of a real Termux: $PREFIX/bin holds the shells, and the unpacked tools live under
+        // cmdline-tools/latest/bin inside the SDK.
+        val prefix = createTempDirectory("prefix").toFile()
+        File(prefix, "bin").mkdirs()
+        File(prefix, "bin/sh").writeText("#!/bin/sh\n")
+        File(prefix, "bin/bash").writeText("#!/bin/bash\n")
+        val bin = File(prefix, "cmdline-tools/latest/bin").apply { mkdirs() }
+        val sdkManager = File(bin, "sdkmanager").apply { writeText("#!/bin/sh\necho body\n") }
+        val avdManager = File(bin, "avdmanager").apply { writeText("#!/usr/bin/env bash\necho body\n") }
+        val notAScript = File(bin, "NOTICE.txt").apply { writeText("no shebang here\n") }
+
+        AndroidSdkInstaller.rewriteShebangs(bin, prefix.absolutePath, {})
+
+        assertEquals("#!${prefix.absolutePath}/bin/sh", sdkManager.readLines().first())
+        assertTrue(sdkManager.readText().contains("echo body"), "the script body must survive")
+        assertEquals(
+            "#!${prefix.absolutePath}/bin/bash",
+            avdManager.readLines().first(),
+            "a script that asked for bash keeps bash",
+        )
+        assertEquals("no shebang here", notAScript.readLines().first())
+    }
+
+    @Test
+    fun `without a termux prefix the tools are left alone`() {
+        val bin = createTempDirectory("bin2").toFile()
+        val sdkManager = File(bin, "sdkmanager").apply { writeText("#!/bin/sh\necho body\n") }
+
+        AndroidSdkInstaller.rewriteShebangs(bin, null, {})
+
+        assertEquals("#!/bin/sh", sdkManager.readLines().first())
+    }
 }

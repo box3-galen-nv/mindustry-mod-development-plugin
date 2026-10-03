@@ -23,6 +23,8 @@ internal class AndroidSdkOptions(
     val sdkInstallDir: File = File("."),
     val sdkDownloadTimeoutMinutes: Long =
         MindustryDownloadConfig.DEFAULT_ANDROID_SDK_DOWNLOAD_TIMEOUT_MINUTES,
+    /** Install only the platform packages when a d8 already resolved; see the DSL property. */
+    val platformOnly: Boolean = false,
     /**
      * A d8 command resolved at configuration time from `build.d8Executable`, the `PATH`, or an
      * already-installed SDK. Null means "nothing usable yet", which is what makes the SDK get installed

@@ -82,6 +82,16 @@ abstract class MindustryDownloadConfig {
     abstract val androidSdkDownloadPackages: ListProperty<String>
 
     /**
+     * Whether to install the platform packages even when a `d8` already resolved.
+     *
+     * `android.jar` is the desugaring classpath and is architecture independent — it is a zip of Java
+     * classes — so it is useful even where `build-tools` cannot run at all. That is the Termux case:
+     * `pkg install d8` supplies the dexer, and this supplies the platform. Off by default, because it
+     * changes what an otherwise finished toolchain installs.
+     */
+    abstract val androidSdkDownloadPlatformOnly: Property<Boolean>
+
+    /**
      * Extra command-line flags for `sdkmanager`, appended to both the license and the package run.
      * Default is empty.
      *
@@ -112,6 +122,7 @@ abstract class MindustryDownloadConfig {
         mindustryDownloadFileName.convention(DEFAULT_FILE_NAME)
         androidSdkAutoDownload.convention(DEFAULT_ANDROID_SDK_AUTO_DOWNLOAD)
         androidSdkDownloadPackages.convention(DEFAULT_ANDROID_SDK_DOWNLOAD_PACKAGES)
+        androidSdkDownloadPlatformOnly.convention(DEFAULT_ANDROID_SDK_DOWNLOAD_PLATFORM_ONLY)
         androidSdkDownloadUrl.convention(commandLineToolsUrl())
         androidSdkDownloadTimeoutMinutes.convention(DEFAULT_ANDROID_SDK_DOWNLOAD_TIMEOUT_MINUTES)
     }
@@ -134,6 +145,9 @@ abstract class MindustryDownloadConfig {
 
         /** Default value of [androidSdkDownloadPackages]. */
         val DEFAULT_ANDROID_SDK_DOWNLOAD_PACKAGES = listOf("platforms;android-34", "build-tools;34.0.0")
+
+        /** Default value of [androidSdkDownloadPlatformOnly]. */
+        const val DEFAULT_ANDROID_SDK_DOWNLOAD_PLATFORM_ONLY = false
 
         /** Default value of [androidSdkDownloadTimeoutMinutes], in minutes. */
         const val DEFAULT_ANDROID_SDK_DOWNLOAD_TIMEOUT_MINUTES = 30L
