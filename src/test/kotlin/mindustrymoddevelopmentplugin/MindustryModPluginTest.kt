@@ -91,6 +91,21 @@ class MindustryModPluginTest {
             ModWiring.modSourceExcludes(projectDir, File("/home/user/.gradle"), File("/work/mod/custom-data")),
             "a custom data directory inside the project must not be compiled as mod source",
         )
+        /*
+        downloadAndroidSdk declares the SDK directory as its output, and in single-project mode that
+        directory sits inside the project, which is also the source root: without this exclusion Gradle
+        fails the build for an implicit dependency and the SDK's own sources end up in the mod.
+        */
+        assertEquals(
+            listOf("build/**", ".gradle/**", "**/*.kts", "**/caches/**", "data/**", "sdk/**"),
+            ModWiring.modSourceExcludes(projectDir, File("/home/user/.gradle"), androidSdkDir = File("/work/mod/sdk")),
+            "a project-local SDK directory must not be compiled as mod source",
+        )
+        assertEquals(
+            listOf("build/**", ".gradle/**", "**/*.kts", "**/caches/**", "data/**"),
+            ModWiring.modSourceExcludes(projectDir, File("/home/user/.gradle"), androidSdkDir = File("/opt/android-sdk")),
+            "an SDK outside the project adds no relative entry",
+        )
         assertEquals(
             listOf("build/**", ".gradle/**", "**/*.kts", "**/caches/**", "data/**"),
             ModWiring.modSourceExcludes(projectDir, File("/home/user/.gradle"), File("/tmp/somewhere/data")),

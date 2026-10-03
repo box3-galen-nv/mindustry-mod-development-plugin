@@ -10,6 +10,7 @@ import mindustrymoddevelopmentplugin.tasks.JarTask
 import mindustrymoddevelopmentplugin.tasks.DeployTask
 import mindustrymoddevelopmentplugin.tasks.BuildModHJsonTask
 import mindustrymoddevelopmentplugin.sdk.AndroidSdk
+import mindustrymoddevelopmentplugin.sdk.AndroidSdkOptions
 import mindustrymoddevelopmentplugin.tasks.JarAndroidTask
 import java.io.File
 import org.gradle.api.GradleException
@@ -42,6 +43,10 @@ internal object ModWiring {
             project.gradle.gradleUserHomeDir,
             ownProjectDataDir(project),
             nestedProjectDirs,
+            // Derived from the root project: build { } is root-only, and the SDK may sit inside this
+            // project in single-project mode.
+            androidSdkDir = project.rootProject.extensions
+                .findByType(MindustryModRootExtension::class.java)?.build?.androidSdkDir?.orNull?.asFile,
         )
         val kotlin = requireKotlinPluginIfNeeded(project, excludedSources)
         val rootExt = project.rootProject.extensions.findByType(MindustryModRootExtension::class.java)
@@ -86,13 +91,16 @@ internal object ModWiring {
         project.tasks.register("jarAndroid") { task ->
             task.group = MindustryModPlugin.MINDUSTRY_GROUP
             task.description = "Builds the Android DEX jar with d8."
-            JarAndroidTask.configure(
+                        // The SDK is installed by the root task, not here: this keeps the network out of jarAndroid
+            // itself and makes the install visible in --dry-run.
+            task.dependsOn(project.rootProject.tasks.named("downloadAndroidSdk"))
+JarAndroidTask.configure(
                     task, libsDir, names.jar, names.android,
                     project.files(
                         project.configurations.getByName("compileClasspath"),
                         project.configurations.getByName("runtimeClasspath"),
                     ),
-                    jarAndroidOptions(project, rootExt),
+                    androidOptions(project, rootExt),
                 )
         }
 
@@ -111,7 +119,7 @@ internal object ModWiring {
             DeployTask.configure(
                 task, names.jar, names.android, names.deploy, project,
                 // Auto-download means jarAndroid will provide an SDK itself; otherwise one has to be found.
-                androidSdkAvailable = jarAndroidOptions(project, rootExt).let { options ->
+                androidSdkAvailable = androidOptions(project, rootExt).let { options ->
                     options.autoDownloadSdk || AndroidSdk.findAndroidSdkDir(options.androidSdkDir?.orNull?.asFile) != null
                 },
             )
@@ -182,11 +190,11 @@ internal object ModWiring {
     }
 
     /** Collects the `jarAndroid` settings, falling back to the `run { }` conventions. */
-    internal fun jarAndroidOptions(project: Project, rootExt: MindustryModRootExtension?): JarAndroidTask.Options {
+    internal fun androidOptions(project: Project, rootExt: MindustryModRootExtension?): AndroidSdkOptions {
         val build = rootExt?.build
         val run = rootExt?.run
         val download = rootExt?.download
-        return JarAndroidTask.Options(
+        return AndroidSdkOptions(
             androidSdkDir = build?.androidSdkDir,
             d8Args = build?.d8Args?.get().orEmpty(),
             d8TimeoutMinutes = build?.d8TimeoutMinutes?.get() ?: MindustryBuildConfig.DEFAULT_D8_TIMEOUT_MINUTES,
@@ -243,6 +251,7 @@ internal object ModWiring {
         gradleUserHome: File,
         dataDir: File? = null,
         nestedProjectDirs: List<File> = emptyList(),
+        androidSdkDir: File? = null,
     ): List<String> {
         // Always excluded: the default location, so a leftover data directory from an earlier build
         // is not compiled as mod source either.
@@ -261,6 +270,18 @@ internal object ModWiring {
             val nestedPath = nested.toPath()
             if (nestedPath.startsWith(root) && nestedPath != root) {
                 excludes.add(root.relativize(nestedPath).toString().replace(File.separatorChar, '/') + "/**")
+            }
+        }
+        /*
+        A project-local SDK directory is a source-root candidate too, and it is the worst of them: Gradle
+        refuses to let compileKotlin read a directory that downloadAndroidSdk declares as its output, and the
+        SDK's own sources would otherwise be compiled into the mod. Subprojects rarely contain one, but
+        single-project mode installs the SDK right here.
+        */
+        if (androidSdkDir != null) {
+            val sdkPath = androidSdkDir.toPath()
+            if (sdkPath.startsWith(root) && sdkPath != root) {
+                excludes.add(root.relativize(sdkPath).toString().replace(File.separatorChar, '/') + "/**")
             }
         }
         // A custom data directory inside this project is a source-root candidate too.

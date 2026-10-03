@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+- The Android SDK download is now its own task, `downloadAndroidSdk`, which `jarAndroid` depends on.
+  It is UP-TO-DATE while the requested packages are present, is skipped when a d8 already resolved
+  (a configured one, the `PATH`, or an installed SDK), and never runs from inside `jarAndroid` itself.
+
 ## 1.0.1
 
 - declares that the configuration cache is not supported, which the Plugin Portal requires of every

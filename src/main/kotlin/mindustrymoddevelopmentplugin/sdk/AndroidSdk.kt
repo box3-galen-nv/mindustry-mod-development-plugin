@@ -91,7 +91,8 @@ internal object AndroidSdk {
         throw GradleException(
             "No valid Android SDK found. Tried: ${tried.joinToString("; ")}\n" +
             "Configure it via mindustryModRoot { build { androidSdkDir = file(\"<sdk-path>\") } }, " +
-            "or set the ANDROID_HOME / ANDROID_SDK_ROOT environment variable."
+            "set the ANDROID_HOME / ANDROID_SDK_ROOT environment variable, or run " +
+            "./gradlew downloadAndroidSdk to have the plugin install one."
         )
     }
 

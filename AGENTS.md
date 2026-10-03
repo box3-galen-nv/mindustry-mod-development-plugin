@@ -126,6 +126,7 @@ logging/               RunLogging (the log tee and the cleanup BuildService)
 - **Two deliberate tradeoffs, both documented in the README**: `jarAndroid` fingerprints the SDK by path
   only (hashing a whole SDK costs more than re-running d8), and `build/buildCounter.txt` is read while the
   artifact name is resolved, so it is not a declared task input — the name changes anyway.
+- **The Android SDK install is its own root task**, `downloadAndroidSdk`, and `jarAndroid` depends on it instead of installing anything itself: installing from inside `jarAndroid` meant a build that only inspected the task graph could start a download, and it hid the install from `--dry-run`. The task declares the SDK directory as its output, so deleting the SDK re-installs instead of reporting UP-TO-DATE, and the packages as its input. It is *skipped* whenever a d8 already resolved — `build.d8Executable`, the `PATH`, or an installed SDK — which is what keeps Termux's `pkg install d8` setup from ever touching an SDK. `sdk/AndroidSdkOptions` is shared by both tasks, and the policy itself lives in `AndroidSdkInstaller.resolveOrInstall`.
 - **d8 is looked up without an Android SDK, in this order**: `build.d8Executable`, then `d8` on the `PATH`
   (but only when the project did *not* configure `build.androidSdkDir` — an explicit SDK directory is an
   instruction and gets installed if empty), then any installed SDK, then an installation. A lone `lib/d8.jar` is

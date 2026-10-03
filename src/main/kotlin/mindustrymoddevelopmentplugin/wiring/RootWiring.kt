@@ -8,6 +8,7 @@ import mindustrymoddevelopmentplugin.game.GameDataDir
 import mindustrymoddevelopmentplugin.game.MindustryApi
 import mindustrymoddevelopmentplugin.platform.HostPlatform
 import mindustrymoddevelopmentplugin.tasks.ClearModsTask
+import mindustrymoddevelopmentplugin.tasks.DownloadAndroidSdkTask
 import mindustrymoddevelopmentplugin.tasks.DownloadMindustryTask
 import mindustrymoddevelopmentplugin.tasks.GenerateIdeaRunConfigsTask
 import mindustrymoddevelopmentplugin.idea.IdeaRunConfigs
@@ -101,6 +102,26 @@ internal object RootWiring {
 
         // Root project only: there is one server jar for the whole build, and its path convention already
         // points at the root, so a per-project task would only be noise.
+        /*
+        Root project only: the SDK lives in the Gradle user home, or wherever build { } points, so one
+        install serves every mod project. jarAndroid depends on this instead of installing the SDK itself,
+        which is what keeps an inspection-only build from starting a download.
+        */
+        if (project == project.rootProject) {
+            project.tasks.register("downloadAndroidSdk") { task ->
+                task.group = MindustryModPlugin.MINDUSTRY_GROUP
+                task.description = "Downloads and installs the Android SDK that jarAndroid dexes with."
+                DownloadAndroidSdkTask.configure(
+                    task,
+                    ModWiring.androidOptions(
+                        project,
+                        project.extensions.findByType(MindustryModRootExtension::class.java),
+                    ),
+                )
+            }
+        }
+
+
         if (project == project.rootProject) {
             project.tasks.register("downloadHeadlessServer") { task ->
                 DownloadMindustryTask.configure(

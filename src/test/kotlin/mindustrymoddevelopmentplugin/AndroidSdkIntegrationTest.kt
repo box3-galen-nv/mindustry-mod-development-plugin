@@ -350,4 +350,77 @@ internal class AndroidSdkIntegrationTest : TestKitFixture() {
             )
             setExecutable(true)
         }
+    @Test
+    fun `jarAndroid depends on downloadAndroidSdk`() {
+        // Asking for jarAndroid alone has to pull the install in: that dependency is what keeps the download
+        // out of jarAndroid's own action while still running before d8.
+        write("settings.gradle.kts", """rootProject.name = "test"""")
+        write("build.gradle.kts", androidBuildScript())
+        write("src/test-mod/Mod.java", "package testmod;\npublic class Mod {}\n")
+
+        val result = runner().withArguments("jarAndroid", "--dry-run").build()
+
+        assertTrue(result.output.contains(":downloadAndroidSdk"), result.output)
+        assertTrue(result.output.contains(":jarAndroid"), result.output)
+    }
+
+    @Test
+    fun `downloadAndroidSdk is skipped when a standalone d8 is available`() {
+        // The Termux shape: `pkg install d8` means the toolchain already works, so the SDK task must do
+        // nothing at all rather than install an SDK the user never asked for.
+        val d8 = fakeD8Script()
+        write("settings.gradle.kts", """rootProject.name = "test"""")
+        write("build.gradle.kts", androidBuildScript(
+            extraBuild = """androidSdkDir = file("no-such-sdk")
+                d8Executable = file("${d8.name}")""",
+        ))
+        write("src/test-mod/Mod.java", "package testmod;\npublic class Mod {}\n")
+
+        val result = runner().withArguments("downloadAndroidSdk").build()
+
+        assertTrue(result.task(":downloadAndroidSdk")?.outcome == TaskOutcome.SKIPPED, result.output)
+        assertTrue(
+            !rootDir.resolve("sdkmanager-calls.txt").exists(),
+            "a standalone d8 must not install an SDK:\n${result.output}",
+        )
+    }
+
+    @Test
+    fun `downloadAndroidSdk leaves an SDK that already satisfies the packages alone`() {
+        // The packages are on disk, so the task must finish without touching its URL: the file: URL below
+        // fails loudly if anything ever tries to download it.
+        fakeAndroidSdk()
+        write("settings.gradle.kts", """rootProject.name = "test"""")
+        write("build.gradle.kts", """
+            ${pluginSnippet}
+            ${kotlinSnippet()}
+            mindustryModRoot {
+                mindustryApiVersion = "159"
+                build {
+                    androidSdkDir = file("sdk")
+                    format = "{name}-{version}"
+                }
+                download {
+                    androidSdkAutoDownload = true
+                    androidSdkDownloadUrl = "file:///nonexistent/commandlinetools.zip"
+                    androidSdkDownloadPackages = listOf("platforms;android-30", "build-tools;34.0.0")
+                }
+            }
+            mindustryMod { modMeta { name = "test-mod"; version = "1.0"; java = true } }
+        """)
+        write("src/test-mod/Mod.java", "package testmod;\npublic class Mod {}\n")
+
+        val result = runner().withArguments("downloadAndroidSdk").build()
+
+        assertTrue(
+            result.task(":downloadAndroidSdk")?.outcome in setOf(TaskOutcome.SUCCESS, TaskOutcome.UP_TO_DATE),
+            result.output,
+        )
+        assertTrue(
+            !rootDir.resolve("sdkmanager-calls.txt").exists(),
+            "an SDK that satisfies the packages needs no install:\n${result.output}",
+        )
+    }
+
+
 }

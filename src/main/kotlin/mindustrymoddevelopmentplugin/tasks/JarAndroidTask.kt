@@ -2,51 +2,21 @@ package mindustrymoddevelopmentplugin.tasks
 
 import mindustrymoddevelopmentplugin.sdk.AndroidSdk
 import mindustrymoddevelopmentplugin.sdk.AndroidSdkInstaller
-import mindustrymoddevelopmentplugin.dsl.MindustryBuildConfig
-import mindustrymoddevelopmentplugin.dsl.MindustryDownloadConfig
+import mindustrymoddevelopmentplugin.sdk.AndroidSdkOptions
 import java.io.File
 import java.util.concurrent.TimeUnit
 import org.gradle.api.file.FileCollection
-import org.gradle.api.logging.Logger
 import org.gradle.api.GradleException
 import org.gradle.api.Task
-import org.gradle.api.file.DirectoryProperty
 
 /**
  * Configures `jarAndroid`, which turns the desktop jar into an Android dex with `d8`.
  *
  * The SDK is resolved (and optionally installed), the selected `d8` is run with a timeout, and its
- * merged output is drained while it runs — see [Options] for the settings and [resolveOrInstallSdk]
+ * merged output is drained while it runs — see [AndroidSdkOptions] for the settings and [AndroidSdkInstaller.resolveOrInstall]
  * for the SDK policy.
  */
 internal object JarAndroidTask {
-    /**
-     * Everything `jarAndroid` needs from `mindustryModRoot { build { } }`.
-     *
-     * Grouped into one object because the flat parameter list stopped being readable; the values
-     * are resolved at configuration time exactly like the DSL properties they come from.
-     */
-    class Options(
-        val androidSdkDir: DirectoryProperty? = null,
-        val d8Args: List<String> = emptyList(),
-        val d8TimeoutMinutes: Long = MindustryBuildConfig.DEFAULT_D8_TIMEOUT_MINUTES,
-        val d8DrainJoinMillis: Long = MindustryBuildConfig.DEFAULT_D8_DRAIN_JOIN_MILLIS,
-        val autoDownloadSdk: Boolean = true,
-        val sdkDownloadUrl: String = "",
-        val sdkDownloadPackages: List<String> = emptyList(),
-        val sdkExtraArgs: List<String> = emptyList(),
-        val sdkInstallDir: File = File("."),
-        val sdkDownloadTimeoutMinutes: Long =
-            MindustryDownloadConfig.DEFAULT_ANDROID_SDK_DOWNLOAD_TIMEOUT_MINUTES,
-        /**
-         * A d8 command resolved at configuration time from `build.d8Executable`, the `PATH`, or an
-         * already-installed SDK. Null means "nothing usable yet", which is what makes the task install an
-         * SDK. It is a prefix rather than one path, because the build-tools fallback is
-         * `java -cp lib/d8.jar com.android.tools.r8.D8`.
-         */
-        val d8Command: List<String>? = null,
-    )
-
     /**
      * Wires `jarAndroid`, which dexes `build/libs/<jarName>.jar` into `build/libs/<androidName>.jar`.
      *
@@ -59,7 +29,7 @@ internal object JarAndroidTask {
         jarName: String,
         androidName: String,
         deps: FileCollection,
-        options: Options = Options(),
+        options: AndroidSdkOptions = AndroidSdkOptions(),
     ) {
         task.dependsOn("jar")
 
@@ -93,12 +63,18 @@ internal object JarAndroidTask {
             task must not touch the SDK at all. Only when there is none anywhere does the SDK get
             installed, which is what keeps dexing possible on Termux (no SDK, `pkg install d8` instead).
             */
+            val configuredSdkDir = options.androidSdkDir?.orNull?.asFile
             val sdkRoot = if (options.d8Command != null) {
-                // Standalone d8: still look for an installed SDK, but only to borrow its android.jar —
-                // never to install one, which is what makes this usable on Termux.
-                AndroidSdk.findAndroidSdkDir(options.androidSdkDir?.orNull?.asFile)
+                // Standalone d8: still look for an installed SDK, but only to borrow its android.jar, never
+                // to install one, which is what makes this usable on Termux.
+                AndroidSdk.findAndroidSdkDir(configuredSdkDir)
             } else {
-                resolveOrInstallSdk(options, task.logger)
+                /*
+                Discovery only. Installing is downloadAndroidSdk's job and this task depends on it, so anything
+                the installer could have provided is already on disk; reaching the fallback means no SDK was
+                found anywhere the lookup looks.
+                */
+                AndroidSdk.findAndroidSdkDir(configuredSdkDir) ?: AndroidSdk.resolveAndroidSdkDir(configuredSdkDir)
             }
             val d8Command = options.d8Command ?: AndroidSdk.resolveD8(null, null, sdkRoot)
                 ?: throw GradleException(
@@ -171,48 +147,5 @@ internal object JarAndroidTask {
                 throw GradleException("d8 failed (exit=$exit):\n$output${AndroidSdk.d8FailureHint(output.toString())}")
             }
         }
-    }
-
-    /**
-     * Returns a usable SDK directory, installing one when [Options.autoDownloadSdk] is on
-     * and the resolved SDK cannot satisfy [Options.sdkDownloadPackages].
-     *
-     * A configured `build.androidSdkDir` that does not exist is *not* fatal: the lookup falls back to
-     * `ANDROID_HOME` / `ANDROID_SDK_ROOT` / the usual user locations first, and only when none of
-     * them satisfies the requested packages does the installer run.
-     *
-     * The installer only ever writes to a directory the plugin owns or was pointed at: the configured
-     * `androidSdkDir` (an empty or absent one is created), otherwise
-     * [Options.sdkInstallDir]. An SDK that was *found* elsewhere — a real Android Studio
-     * SDK behind `ANDROID_HOME`, say — is used as-is when it satisfies the packages and otherwise left
-     * untouched, so a build never silently mutates someone else's SDK.
-     *
-     * With auto-download off this falls back to [AndroidSdk.resolveAndroidSdkDir], which fails loudly
-     * with the list of locations it probed — the behavior before auto-download existed.
-     */
-    internal fun resolveOrInstallSdk(options: Options, logger: Logger): File {
-        val configuredDir = options.androidSdkDir?.orNull?.asFile
-        val existing = AndroidSdk.findAndroidSdkDir(configuredDir)
-
-        if (!options.autoDownloadSdk) {
-            return existing ?: AndroidSdk.resolveAndroidSdkDir(configuredDir)
-        }
-
-        if (!AndroidSdkInstaller.needsInstall(existing, options.sdkDownloadPackages)) return existing!!
-
-        val target = configuredDir ?: options.sdkInstallDir
-        logger.lifecycle(
-            "Android SDK missing or incomplete in '$target' — downloading the command-line tools " +
-            "and installing: ${options.sdkDownloadPackages.joinToString(", ")}"
-        )
-        AndroidSdkInstaller.install(
-            sdkRoot = target,
-            toolsUrl = options.sdkDownloadUrl,
-            packages = options.sdkDownloadPackages,
-            extraArgs = options.sdkExtraArgs,
-            timeoutMinutes = options.sdkDownloadTimeoutMinutes,
-            log = { logger.lifecycle("[android-sdk] $it") },
-        )
-        return target
     }
 }

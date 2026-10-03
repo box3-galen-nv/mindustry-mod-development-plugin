@@ -1,6 +1,5 @@
 package mindustrymoddevelopmentplugin.sdk
 
-import mindustrymoddevelopmentplugin.tasks.JarAndroidTask
 import java.io.File
 import java.nio.file.Path
 import java.util.zip.ZipEntry
@@ -198,7 +197,7 @@ class AndroidSdkInstallerTest {
         assertTrue(File(sdk, "cmdline-tools/latest/bin/sdkmanager").isFile, "the tools must still be unpacked")
     }
 
-    // ---- resolveOrInstallSdk (what jarAndroid runs before d8) ----
+    // ---- resolveOrInstall (what downloadAndroidSdk runs before jarAndroid) ----
 
     @Test
     fun `jarAndroid reuses an sdk that satisfies the requested packages`() {
@@ -209,7 +208,7 @@ class AndroidSdkInstallerTest {
         File(sdk, "build-tools/34.0.0/d8").writeText("x")
 
         val project = ProjectBuilder.builder().build()
-        val result = JarAndroidTask.resolveOrInstallSdk(jarAndroidOptions(
+        val result = AndroidSdkInstaller.resolveOrInstall(androidSdkOptions(
                 project, sdk,
                 // A URL that cannot work: if an installation were attempted, this test would fail.
                 packages = listOf("platforms;android-34", "build-tools;34.0.0"),
@@ -234,7 +233,7 @@ class AndroidSdkInstallerTest {
         val record = File(root, "sdkmanager-calls.txt")
         val url = fakeToolsArchive(record) // creates platforms/android-30 + build-tools/34.0.0
         val project = ProjectBuilder.builder().build()
-        val result = JarAndroidTask.resolveOrInstallSdk(jarAndroidOptions(
+        val result = AndroidSdkInstaller.resolveOrInstall(androidSdkOptions(
                 project, sdk, url,
                 packages = listOf("platforms;android-30", "build-tools;34.0.0"),
             ),
@@ -255,7 +254,7 @@ class AndroidSdkInstallerTest {
         File(sdk, "build-tools/34.0.0/d8").writeText("x")
 
         val project = ProjectBuilder.builder().build()
-        val result = JarAndroidTask.resolveOrInstallSdk(jarAndroidOptions(
+        val result = AndroidSdkInstaller.resolveOrInstall(androidSdkOptions(
                 project, sdk, "file:///nonexistent/commandlinetools.zip",
                 packages = listOf("platforms;android-34"),
                 autoDownload = false,
@@ -459,14 +458,14 @@ class AndroidSdkInstallerTest {
         assertTrue(message.contains("androidSdkDownloadUrl"), "the hint should mention the mirror option: $message")
     }
 
-    /** [JarAndroidTask.Options] with the SDK dir wired through a real Gradle property. */
-    private fun jarAndroidOptions(
+    /** [AndroidSdkOptions] with the SDK dir wired through a real Gradle property. */
+    private fun androidSdkOptions(
         project: org.gradle.api.Project,
         sdkDir: File,
         toolsUrl: String = "file:///nonexistent/commandlinetools.zip",
         packages: List<String> = emptyList(),
         autoDownload: Boolean = true,
-    ) = JarAndroidTask.Options(
+    ) = AndroidSdkOptions(
         androidSdkDir = project.objects.directoryProperty().apply { set(sdkDir) },
         autoDownloadSdk = autoDownload,
         sdkDownloadUrl = toolsUrl,

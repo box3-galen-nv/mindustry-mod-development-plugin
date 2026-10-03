@@ -1,6 +1,7 @@
 package mindustrymoddevelopmentplugin.sdk
 
 import java.io.File
+import org.gradle.api.logging.Logger
 import java.io.FileOutputStream
 import java.net.URI
 import java.nio.channels.FileChannel
@@ -426,5 +427,47 @@ internal object AndroidSdkInstaller {
             val message = "Could not make '${file.absolutePath}' executable (read-only mount or permissions?)."
             if (required) throw GradleException(message) else log("Warning: $message")
         }
+    }
+
+    /**
+     * Returns an SDK that satisfies [AndroidSdkOptions.sdkDownloadPackages], installing one when it may.
+     *
+     * A configured `build.androidSdkDir` that does not exist is *not* fatal: the lookup falls back to
+     * `ANDROID_HOME` / `ANDROID_SDK_ROOT` / the usual user locations first, and only when none of them
+     * satisfies the requested packages does the installer run.
+     *
+     * The installer only ever writes to a directory the plugin owns or was pointed at: the configured
+     * `androidSdkDir` (an empty or absent one is created), otherwise [AndroidSdkOptions.sdkInstallDir]. An
+     * SDK found elsewhere — a real Android Studio SDK behind `ANDROID_HOME`, say — is used as-is when it
+     * satisfies the packages and otherwise left untouched, so a build never silently mutates someone
+     * else's SDK.
+     *
+     * With auto-download off this falls back to [AndroidSdk.resolveAndroidSdkDir], which fails loudly with
+     * the list of locations it probed — the behavior before auto-download existed.
+     */
+    fun resolveOrInstall(options: AndroidSdkOptions, logger: Logger): File {
+        val configuredDir = options.androidSdkDir?.orNull?.asFile
+        val existing = AndroidSdk.findAndroidSdkDir(configuredDir)
+
+        if (!options.autoDownloadSdk) {
+            return existing ?: AndroidSdk.resolveAndroidSdkDir(configuredDir)
+        }
+
+        if (!needsInstall(existing, options.sdkDownloadPackages)) return existing!!
+
+        val target = configuredDir ?: options.sdkInstallDir
+        logger.lifecycle(
+            "Android SDK missing or incomplete in '$target' — downloading the command-line tools " +
+            "and installing: ${options.sdkDownloadPackages.joinToString(", ")}"
+        )
+        install(
+            sdkRoot = target,
+            toolsUrl = options.sdkDownloadUrl,
+            packages = options.sdkDownloadPackages,
+            extraArgs = options.sdkExtraArgs,
+            timeoutMinutes = options.sdkDownloadTimeoutMinutes,
+            log = { logger.lifecycle("[android-sdk] $it") },
+        )
+        return target
     }
 }
