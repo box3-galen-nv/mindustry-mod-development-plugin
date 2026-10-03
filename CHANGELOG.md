@@ -10,6 +10,9 @@
   plugin cannot fetch it itself, because itch.io serves no direct file URL — validates that it really is an
   APK (`AndroidManifest.xml` and `classes.dex`), and warns with the itch.io pointer when neither a URL nor a
   local `run.androidApkPath` is available. A missing APK never fails a build.
+- `checkAndroidApkVersion` reads the APK's own `assets/version.properties` and warns when it does not match
+  `download.mindustryDownloadVersion`, or when it is a BE build whose application id differs from
+  `run.androidAppId`. Local only, warn only, and switchable with `run.androidApkVersionCheck`.
 - On Termux the unpacked command-line tools get their shebang rewritten to `$PREFIX/bin/sh`, because
   Android has no `/bin/sh` and `sdkmanager` is a shell script the plugin execs directly.
   It is UP-TO-DATE while the requested packages are present, is skipped when a d8 already resolved

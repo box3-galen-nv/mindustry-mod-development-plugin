@@ -170,4 +170,61 @@ internal class DownloadIntegrationTest : TestKitFixture() {
         val result = tasksResult()
         assertTrue(result.output.contains("CJK characters"))
     }
+    @Test
+    fun `checkAndroidApkVersion warns about the apk it finds and honors its switch`() {
+        // The APK is written by the test, not fetched: this task must never use the network.
+        val apk = rootDir.resolve("apk/Mindustry.apk")
+        apk.parentFile.mkdirs()
+        java.util.zip.ZipOutputStream(apk.outputStream()).use { zip ->
+            zip.putNextEntry(java.util.zip.ZipEntry("AndroidManifest.xml")); zip.write("<manifest/>".toByteArray()); zip.closeEntry()
+            zip.putNextEntry(java.util.zip.ZipEntry("classes.dex")); zip.write("dex".toByteArray()); zip.closeEntry()
+            zip.putNextEntry(java.util.zip.ZipEntry("assets/version.properties"))
+            zip.write("build=999\ntype=official\nandroidBuildCode=1\n".toByteArray())
+            zip.closeEntry()
+        }
+        write("settings.gradle.kts", """rootProject.name = "test"""")
+        write("build.gradle.kts", """
+            ${pluginSnippet}
+            mindustryModRoot {
+                mindustryApiVersion = "159"
+                download {
+                    mindustryDownloadVersion = "147"
+                    // No test may reach the network for the game itself.
+                    mindustryDownloadUrl = "file:///nonexistent/mindustry-releases"
+                }
+                run { androidApkPath = file("apk/Mindustry.apk") }
+            }
+            mindustryMod { modMeta { name = "test-mod"; version = "1.0"; java = true } }
+        """)
+
+        val reported = runner().withArguments("checkAndroidApkVersion").build()
+
+        assertTrue(reported.task(":checkAndroidApkVersion")?.outcome == TaskOutcome.SUCCESS, reported.output)
+        assertTrue(
+            reported.output.contains("999") && reported.output.contains("147"),
+            "the mismatch must name both versions:\n${reported.output}",
+        )
+        assertTrue(!reported.output.contains("github.com"), "the check must not touch the network")
+
+        // The switch turns the check off, and off means SKIPPED rather than a silent no-op.
+        write("build.gradle.kts", """
+            ${pluginSnippet}
+            mindustryModRoot {
+                mindustryApiVersion = "159"
+                download {
+                    mindustryDownloadVersion = "147"
+                    mindustryDownloadUrl = "file:///nonexistent/mindustry-releases"
+                }
+                run {
+                    androidApkPath = file("apk/Mindustry.apk")
+                    androidApkVersionCheck = false
+                }
+            }
+            mindustryMod { modMeta { name = "test-mod"; version = "1.0"; java = true } }
+        """)
+        val skipped = runner().withArguments("checkAndroidApkVersion").build()
+        assertTrue(skipped.task(":checkAndroidApkVersion")?.outcome == TaskOutcome.SKIPPED, skipped.output)
+    }
+
+
 }

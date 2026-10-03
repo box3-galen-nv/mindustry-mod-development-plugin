@@ -7,6 +7,7 @@ import mindustrymoddevelopmentplugin.dsl.MindustryRunConfig
 import mindustrymoddevelopmentplugin.game.GameDataDir
 import mindustrymoddevelopmentplugin.game.MindustryApi
 import mindustrymoddevelopmentplugin.platform.HostPlatform
+import mindustrymoddevelopmentplugin.tasks.CheckAndroidApkVersionTask
 import mindustrymoddevelopmentplugin.tasks.ClearModsTask
 import mindustrymoddevelopmentplugin.tasks.DownloadAndroidApkTask
 import mindustrymoddevelopmentplugin.tasks.DownloadAndroidSdkTask
@@ -144,6 +145,23 @@ internal object RootWiring {
                     run.androidApkPath.get().asFile,
                     run.androidApkUrl.get(),
                     offline = project.gradle.startParameter.isOffline,
+                )
+            }
+        }
+
+        /*
+        Root project only, because there is one APK for the whole build. It reads the APK the project
+        already has and never fetches one: a build must not need the network to warn about a version it can
+        see on disk.
+        */
+        if (project == project.rootProject) {
+            project.tasks.register("checkAndroidApkVersion") { task ->
+                CheckAndroidApkVersionTask.configure(
+                    task,
+                    run.androidApkPath.get().asFile,
+                    download.mindustryDownloadVersion.get(),
+                    run.androidAppId.get(),
+                    run.androidApkVersionCheck.get(),
                 )
             }
         }

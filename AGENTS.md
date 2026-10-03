@@ -133,7 +133,11 @@ logging/               RunLogging (the log tee and the cleanup BuildService)
   no `AndroidManifest.xml`, no `classes.dex` — instead of using it. A missing APK warns with the itch.io
   pointer and never fails the build, because staging the mod jars does not need one. It reuses
   `DownloadMindustryTask.fetch`, so `.part`, the zip check and the `.url` stamp behave as they do for the
-  game jar; only the noun in its failure messages differs.
+  game jar; only the noun in its failure messages differs. `checkAndroidApkVersion` reads the APK's own
+  `assets/version.properties` (`build`, `type`, `androidBuildCode`) and warns about a `build` that differs
+  from `download.mindustryDownloadVersion` or a `type` that is not `official` — a BE APK needs a matching
+  `run.androidAppId`. It never uses the network, never fails a build, is SKIPPED when
+  `run.androidApkVersionCheck` is false, and says nothing when the APK or that entry is missing.
 - **The Android SDK install is its own root task**, `downloadAndroidSdk`, and `jarAndroid` depends on it instead of installing anything itself: installing from inside `jarAndroid` meant a build that only inspected the task graph could start a download, and it hid the install from `--dry-run`. The task declares the SDK directory as its output, so deleting the SDK re-installs instead of reporting UP-TO-DATE, and the packages as its input. It is *skipped* whenever a d8 already resolved — `build.d8Executable`, the `PATH`, or an installed SDK — which is what keeps Termux's `pkg install d8` setup from ever touching an SDK. `sdk/AndroidSdkOptions` is shared by both tasks, and the policy itself lives in `AndroidSdkInstaller.resolveOrInstall`. With `download.androidSdkDownloadPlatformOnly` (default off) a resolved d8 no longer skips the task outright: it installs only the `platforms;*` packages, because `android.jar` is the desugaring classpath, is architecture independent, and is the one thing a Termux user with `pkg install d8` cannot otherwise get — and build-tools are deliberately left to that d8. The unpacked command-line tools are shell scripts that run Java, and `runSdkManager` execs the script directly, so on Termux their shebangs are rewritten to `$PREFIX/bin/sh`; without that the install fails with an interpreter error that names nothing.
 - **d8 is looked up without an Android SDK, in this order**: `build.d8Executable`, then `d8` on the `PATH`
   (but only when the project did *not* configure `build.androidSdkDir` — an explicit SDK directory is an
