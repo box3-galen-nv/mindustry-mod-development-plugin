@@ -89,7 +89,7 @@ internal object DownloadMindustryTask {
             if (parent != null && !parent.isDirectory && !parent.mkdirs()) {
                 throw GradleException("Cannot create the directory for '$target'.")
             }
-            download(url, target, stamp, logger::lifecycle)
+            fetch(url, target, logger::lifecycle)
         }
     }
 
@@ -130,11 +130,20 @@ internal object DownloadMindustryTask {
     }
 
     /**
-     * Streams [url] into `[target].part`, verifies that the result is a jar, and moves it into place.
+     * Streams [url] into [target] through a `.part` sibling, checks the zip signature, then writes the stamp.
      *
-     * A `file:` URL is read from disk instead of fetched, which is what the tests use.
+     * Shared with the other downloaders in this plugin, so the expected kind of file and the property that
+     * pointed here are parameters: an APK failure must not tell the user to check the game jar's URL. A
+     * `file:` URL is read from disk instead of fetched, which is what the tests use.
      */
-    private fun download(url: String, target: File, stamp: File, log: (String) -> Unit) {
+    internal fun fetch(
+        url: String,
+        target: File,
+        log: (String) -> Unit,
+        expected: String = "Mindustry jar",
+        sourceHint: String = "download.mindustryDownloadUrl and download.mindustryDownloadVersion",
+    ) {
+        val stamp = stampOf(target)
         val part = partOf(target)
         part.delete()
         log("Downloading $url")
@@ -150,8 +159,8 @@ internal object DownloadMindustryTask {
             val size = if (part.isFile) part.length() else 0L
             part.delete()
             throw GradleException(
-                "Downloaded $url, but the result is not a Mindustry jar ($size bytes). " +
-                "Check download.mindustryDownloadUrl and download.mindustryDownloadVersion" +
+                "Downloaded $url, but the result is not a $expected ($size bytes). " +
+                "Check $sourceHint" +
                 (if (size in 1 until MIN_PLAUSIBLE_JAR_BYTES) " — that response looks like an error page." else ".")
             )
         }

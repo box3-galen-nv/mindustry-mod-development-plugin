@@ -399,4 +399,11 @@ class MindustryModExtensionTest {
         assertTrue(ext.build.jarSuffix.get() == "-Desk")
         assertTrue(ext.debug.debugPort.get() == 5010)
     }
+
+    @Test
+    fun `the apk settings default to no download and a local version check`() {
+        val config = runConfig()
+        assertEquals("", config.androidApkUrl.get(), "nothing is fetched unless a URL is named")
+        assertTrue(config.androidApkVersionCheck.get(), "the local version check is on by default")
+    }
 }

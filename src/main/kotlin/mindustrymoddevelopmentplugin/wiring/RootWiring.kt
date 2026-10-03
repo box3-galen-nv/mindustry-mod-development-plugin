@@ -8,6 +8,7 @@ import mindustrymoddevelopmentplugin.game.GameDataDir
 import mindustrymoddevelopmentplugin.game.MindustryApi
 import mindustrymoddevelopmentplugin.platform.HostPlatform
 import mindustrymoddevelopmentplugin.tasks.ClearModsTask
+import mindustrymoddevelopmentplugin.tasks.DownloadAndroidApkTask
 import mindustrymoddevelopmentplugin.tasks.DownloadAndroidSdkTask
 import mindustrymoddevelopmentplugin.tasks.DownloadMindustryTask
 import mindustrymoddevelopmentplugin.tasks.GenerateIdeaRunConfigsTask
@@ -63,6 +64,14 @@ internal object RootWiring {
                 project.provider { AndroidStaging.defaultDir(File(System.getProperty("user.home"))) },
             ),
         )
+        // One APK for the whole build, like the headless server jar, so its default lives in the root.
+        run.androidApkPath.convention(
+            project.layout.file(
+                project.provider { File(project.rootProject.projectDir, "build/game/Mindustry.apk") },
+            ),
+        )
+        run.androidApkUrl.convention(MindustryRunConfig.DEFAULT_ANDROID_APK_URL)
+        run.androidApkVersionCheck.convention(MindustryRunConfig.DEFAULT_ANDROID_APK_VERSION_CHECK)
 
         // A relative MINDUSTRY_DATA_DIR is resolved against this *Gradle* process's working directory,
         // while the game resolves it against its own — so the plugin and the game can disagree.
@@ -124,6 +133,20 @@ internal object RootWiring {
             }
         }
 
+        /*
+        Root project only, like the server jar: there is one APK for the whole build. It never fails when
+        nothing can be fetched — the APK is a convenience for the import step, and staging works without it.
+        */
+        if (project == project.rootProject) {
+            project.tasks.register("downloadAndroidApk") { task ->
+                DownloadAndroidApkTask.configure(
+                    task,
+                    run.androidApkPath.get().asFile,
+                    run.androidApkUrl.get(),
+                    offline = project.gradle.startParameter.isOffline,
+                )
+            }
+        }
 
         if (project == project.rootProject) {
             project.tasks.register("downloadHeadlessServer") { task ->

@@ -327,6 +327,8 @@ org.gradle.jvmargs=-Xmx1g
 这里没有 JVM 可启动，因为 APK 的启动器不接受 JVM 参数，而且没有别的应用能替你写入它的 `Android/data` 目录。
 在 Android 上请求调试会直接失败并说明原因（Android 运行时没有 JDWP 套接字）。
 
+你导入用的那个 APK 不会替你下载：itch.io 不提供文件直链 —— 它的下载要走服务端 session 握手 —— 所以 `downloadAndroidApk` 只在你设置了 `run.androidApkUrl`（你自己的 itch.io key 链接，或镜像）时才去取，否则只告诉你去哪里拿。`run.androidApkPath` 默认是根工程的 `build/game/Mindustry.apk`，已经在那里的 APK 永远不会被替换。不是 APK 的文件 —— 比如改名保存的错误页，或缺少 `AndroidManifest.xml` / `classes.dex` 的归档 —— 会被报告出来而不是拿来用；缺少 APK 也绝不会让构建失败，因为暂存 mod jar 并不需要它。
+
 **无头服务器，以及手机上如何调试。** `run.useHeadlessServer = true` 会运行 `server-release.jar`（由
 `downloadHeadlessServer` 下载到 `download.headlessJarPath`），工作目录是 `run.headlessServerWorkingDir`，模组被暂存到
 它的 `config/mods`。它就是一个普通 JVM，所以 `-PmindustryDebug=true` 会照常打开 `localhost:5005`，供

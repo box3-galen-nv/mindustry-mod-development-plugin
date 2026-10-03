@@ -3,6 +3,7 @@ package mindustrymoddevelopmentplugin.dsl
 import mindustrymoddevelopmentplugin.platform.HostPlatform
 import mindustrymoddevelopmentplugin.game.GameDataDir
 import org.gradle.api.file.DirectoryProperty
+import org.gradle.api.file.RegularFileProperty
 import org.gradle.api.provider.Property
 
 /**
@@ -98,6 +99,25 @@ abstract class MindustryRunConfig {
     abstract val androidLaunchApk: Property<Boolean>
 
     /**
+     * A Mindustry APK to stage and import. itch.io serves no direct file URL — its downloads go through a
+     * session-backed handshake — so the plugin cannot fetch the APK by itself and this is the path the user
+     * puts theirs in. Default: `build/game/Mindustry.apk` in the root project.
+     */
+    abstract val androidApkPath: RegularFileProperty
+
+    /**
+     * Optional URL of an APK this build may fetch: the user's own itch.io key link, or a mirror. Empty (the
+     * default) means nothing is downloaded, and `downloadAndroidApk` only reports where to get one.
+     */
+    abstract val androidApkUrl: Property<String>
+
+    /**
+     * Whether a run checks the staged APK's version against the one this build compiles against. Only reads
+     * the APK's own `assets/version.properties` and warns; it never fails a build and never uses the network.
+     */
+    abstract val androidApkVersionCheck: Property<Boolean>
+
+    /**
      * Run `server-release.jar` instead of the desktop client.
      *
      * The server is a plain JVM process: it is the only way to debug on Android, and it works on a desktop
@@ -111,6 +131,8 @@ abstract class MindustryRunConfig {
         hostPlatform.convention(HostPlatform.Auto)
         useHeadlessServer.convention(false)
         androidLaunchApk.convention(false)
+        androidApkUrl.convention(DEFAULT_ANDROID_APK_URL)
+        androidApkVersionCheck.convention(DEFAULT_ANDROID_APK_VERSION_CHECK)
         androidAppId.convention(GameDataDir.ANDROID_APP_ID)
         deployTag.convention(DEFAULT_DEPLOY_TAG)
         cleanDeployedFiles.convention(DEFAULT_CLEAN_DEPLOYED_FILES)
@@ -127,6 +149,12 @@ abstract class MindustryRunConfig {
 
         /** Default value of [useDeployRun]. */
         const val DEFAULT_USE_DEPLOY_RUN = true
+
+        /** Default value of [androidApkUrl]: nothing is fetched unless the user names a URL. */
+        const val DEFAULT_ANDROID_APK_URL = ""
+
+        /** Default value of [androidApkVersionCheck]. */
+        const val DEFAULT_ANDROID_APK_VERSION_CHECK = true
 
     }
 }

@@ -127,6 +127,13 @@ logging/               RunLogging (the log tee and the cleanup BuildService)
 - **Two deliberate tradeoffs, both documented in the README**: `jarAndroid` fingerprints the SDK by path
   only (hashing a whole SDK costs more than re-running d8), and `build/buildCounter.txt` is read while the
   artifact name is resolved, so it is not a declared task input — the name changes anyway.
+- **The APK is never fetched from itch.io** (see the verified facts): `downloadAndroidApk` is a root task that
+  uses `run.androidApkUrl` when the user sets one, never replaces an APK that is already at
+  `run.androidApkPath` (default `build/game/Mindustry.apk`), and reports a file that cannot be an APK —
+  no `AndroidManifest.xml`, no `classes.dex` — instead of using it. A missing APK warns with the itch.io
+  pointer and never fails the build, because staging the mod jars does not need one. It reuses
+  `DownloadMindustryTask.fetch`, so `.part`, the zip check and the `.url` stamp behave as they do for the
+  game jar; only the noun in its failure messages differs.
 - **The Android SDK install is its own root task**, `downloadAndroidSdk`, and `jarAndroid` depends on it instead of installing anything itself: installing from inside `jarAndroid` meant a build that only inspected the task graph could start a download, and it hid the install from `--dry-run`. The task declares the SDK directory as its output, so deleting the SDK re-installs instead of reporting UP-TO-DATE, and the packages as its input. It is *skipped* whenever a d8 already resolved — `build.d8Executable`, the `PATH`, or an installed SDK — which is what keeps Termux's `pkg install d8` setup from ever touching an SDK. `sdk/AndroidSdkOptions` is shared by both tasks, and the policy itself lives in `AndroidSdkInstaller.resolveOrInstall`. With `download.androidSdkDownloadPlatformOnly` (default off) a resolved d8 no longer skips the task outright: it installs only the `platforms;*` packages, because `android.jar` is the desugaring classpath, is architecture independent, and is the one thing a Termux user with `pkg install d8` cannot otherwise get — and build-tools are deliberately left to that d8. The unpacked command-line tools are shell scripts that run Java, and `runSdkManager` execs the script directly, so on Termux their shebangs are rewritten to `$PREFIX/bin/sh`; without that the install fails with an interpreter error that names nothing.
 - **d8 is looked up without an Android SDK, in this order**: `build.d8Executable`, then `d8` on the `PATH`
   (but only when the project did *not* configure `build.androidSdkDir` — an explicit SDK directory is an
@@ -201,6 +208,12 @@ logging/               RunLogging (the log tee and the cleanup BuildService)
 - A mod built by this plugin loads in the real headless server: `server-release.jar` (checked with v146 and
   v159.7) reports `1 mods loaded.` for a fixture whose metadata names its `main` class. There is **no**
   `Loading mod:` line in those versions — the string comes from elsewhere, so grepping for it wastes time.
+- itch.io serves **no direct file URL** for Mindustry: `https://itch.io/api/1/x/wharf/latest?target=anuke/mindustry&channel_name=android`
+  answers `{"latest":"160.5"}` without any auth, but `anuke.itch.io/mindustry/data.json` lists no files and
+  `download/linux`, `file/latest` and `download-url` answer 302/302/404. Real downloads need a session key,
+  so the plugin can never fetch the APK itself — `downloadAndroidApk` uses a user-supplied `run.androidApkUrl`
+  and otherwise only says where to get one. The official v160.5 APK carries `assets/version.properties`
+  (`build=160.5`, `type=official`, `androidBuildCode=30596`), `AndroidManifest.xml` and `classes.dex`.
 - `Mods.load()` lists `<dataDir>/mods` flat and keeps `*.jar`, `*.zip` and folders containing a
   metadata file — subdirectories are not scanned. `mod.hjson` starts at v101, the `mindustry.mod.*`
   package at v102.

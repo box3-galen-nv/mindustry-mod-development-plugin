@@ -123,4 +123,19 @@ class MindustryModPluginTest {
         )
         assertTrue(error.chainMessages().contains("no mod system"), error.chainMessages())
     }
+
+    @Test
+    fun `the root project gets downloadAndroidApk and a build game default path`() {
+        // One APK for the whole build, so the task is root-only like downloadHeadlessServer.
+        val project = modProject("159")
+        assertTrue(
+            project.tasks.findByName("downloadAndroidApk") != null,
+            "expected the root task, got ${project.tasks.names}",
+        )
+        val run = project.extensions.getByType(MindustryModRootExtension::class.java).run
+        assertEquals(
+            File(project.rootProject.projectDir, "build/game/Mindustry.apk"),
+            run.androidApkPath.get().asFile,
+        )
+    }
 }

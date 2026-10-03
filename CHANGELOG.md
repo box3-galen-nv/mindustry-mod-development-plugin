@@ -6,6 +6,10 @@
 - `download.androidSdkDownloadPlatformOnly` (default off) lets a Termux setup with `pkg install d8`
   install just the platform packages, so `android.jar` can reach d8's desugaring classpath without
   installing a build-tools over the d8 that is already there.
+- `downloadAndroidApk` fetches the Mindustry APK from `run.androidApkUrl` when a project sets one — the
+  plugin cannot fetch it itself, because itch.io serves no direct file URL — validates that it really is an
+  APK (`AndroidManifest.xml` and `classes.dex`), and warns with the itch.io pointer when neither a URL nor a
+  local `run.androidApkPath` is available. A missing APK never fails a build.
 - On Termux the unpacked command-line tools get their shebang rewritten to `$PREFIX/bin/sh`, because
   Android has no `/bin/sh` and `sdkmanager` is a shell script the plugin execs directly.
   It is UP-TO-DATE while the requested packages are present, is skipped when a d8 already resolved
