@@ -26,8 +26,9 @@ internal object DeployTask {
     ) {
         /*
         A desktop-only build must not be blocked by a missing Android SDK: `jarAndroid` is only wired in
-        when there is an SDK to use (or auto-download is on), and otherwise the merge says so and ships
-        the desktop jar alone.
+        when there is an SDK to use (or auto-download is on), and otherwise the merge ships the desktop jar
+        alone. The warning is loud about the consequence, though, because on Android that jar cannot load at
+        all — the engine looks for classes.dex inside the mod zip.
         */
         task.dependsOn("jar")
         if (androidSdkAvailable) task.dependsOn("jarAndroid")
@@ -35,6 +36,8 @@ internal object DeployTask {
             task.doFirst {
                 task.logger.warn(
                     "No usable Android SDK found, so '$deployName.jar' contains the desktop classes only. " +
+                    "On Android that jar can never load: the engine looks for classes.dex inside the mod zip " +
+                    "and the APK loads it through DexClassLoader, so a mod needs its Android half. " +
                     "Set build.androidSdkDir, install one, or enable download.androidSdkAutoDownload."
                 )
             }

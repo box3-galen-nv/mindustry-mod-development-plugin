@@ -242,9 +242,11 @@ internal object RootWiring {
         }
 
         /*
-        Android has no JVM to launch and no debugger to attach to. The task above is registered at apply
-        time so a build script can still write tasks.named("runMindustry") { dependsOn("deploy") }; the
-        staging behavior is attached here, because run { } is only evaluated after apply().
+        Android has no JVM to launch and no debugger to attach to: the APK's launcher takes no JVM
+        arguments, so there is no way to add a debug agent to it, and ART is not a JVM a JDWP client can
+        attach to. The task above is registered at apply time so a build script can still write
+        tasks.named("runMindustry") { dependsOn("deploy") }; the staging behavior is attached here, because
+        run { } is only evaluated after apply().
         */
         project.afterEvaluate {
             if (run.hostPlatform.get() == HostPlatform.Android && !run.useHeadlessServer.get()) {

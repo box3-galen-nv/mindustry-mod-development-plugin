@@ -27,6 +27,8 @@ enum class HostPlatform {
          *
          * The architecture is deliberately not part of the test: Linux plus Termux is the signal, and a
          * Termux on x86_64 (emulator, ChromeOS) is just as unable to run the desktop jar as one on aarch64.
+         * What actually differs on Android — no JVM a debugger can attach to, and no way to write the game's
+         * own data directory — does not depend on the CPU either.
          */
         fun detect(
             osName: String = System.getProperty("os.name").orEmpty(),

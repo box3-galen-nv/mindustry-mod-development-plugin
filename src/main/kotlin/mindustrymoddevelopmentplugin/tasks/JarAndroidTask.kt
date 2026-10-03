@@ -83,8 +83,12 @@ internal object JarAndroidTask {
                     "download.androidSdkAutoDownload."
                 )
 
-            // The platform on the classpath makes desugaring better, but it is not required: on Termux
-            // there is usually no SDK at all and dexing still works.
+            /*
+            android.jar is optional on purpose. It is only the desugaring classpath, so without it d8 still
+            produces valid dex for a mod that avoids default interface methods and the other desugared
+            constructs. Making a missing platform fatal would break the Termux setup, where `pkg install d8`
+            is the whole toolchain and no SDK exists, for a build that would otherwise succeed.
+            */
             val androidJar = sdkRoot?.let { AndroidSdk.findAndroidJar(it) }
             if (androidJar == null) {
                 task.logger.warn(
