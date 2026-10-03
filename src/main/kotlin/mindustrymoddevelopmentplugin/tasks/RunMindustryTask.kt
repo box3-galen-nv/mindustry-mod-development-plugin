@@ -75,6 +75,8 @@ internal object RunMindustryTask {
         val launchApk: Boolean,
         /** The `am` executable; injectable so a desktop machine can exercise the failure path. */
         val amExecutable: String = "am",
+        /** True when staging lands in the Termux-private fallback, which the game's picker cannot see. */
+        val privateStagingFallback: Boolean = false,
     )
 
     /**
@@ -97,6 +99,18 @@ internal object RunMindustryTask {
         task.doLast {
             val logger = task.logger
             options.stagingDir.mkdirs()
+            /*
+            The game's picker only shows shared storage, so a run that stages into the private fallback has
+            to say why the import dialog will not list the file, and what to do instead.
+            */
+            if (options.privateStagingFallback) {
+                logger.warn(
+                    "Staging in '${options.stagingDir}', which the game's file picker cannot see: it only " +
+                    "shows shared storage. Run termux-setup-storage so the shared Download directory can be " +
+                    "used, set run.androidStagingDir to a shared location, or copy the staged jar there " +
+                    "yourself."
+                )
+            }
             val staged = mutableListOf<File>()
 
             mods.forEach { mod ->

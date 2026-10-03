@@ -39,7 +39,7 @@ tasks/                  the task objects and nothing else: one <Name>Task per fi
                         configure(...) that does the wiring
 wiring/                 ModWiring (one mod project's sources and tasks), RootWiring (the root's tasks,
                         conventions and warnings), GradleProperties (reading -P/gradle.properties
-                        booleans by value)
+                        booleans by value), AndroidStaging (where staged jars go, and why)
 sdk/                    AndroidSdk (discovery and d8 command assembly), AndroidSdkInstaller (downloading
                         and installing the SDK)
 idea/                   IdeaRunConfigs (the .run/*.xml generator)
@@ -101,7 +101,8 @@ logging/               RunLogging (the log tee and the cleanup BuildService)
 - **`.run/` is written by the `generateIdeaRunConfigs` task**, never during configuration. Bump
   `IdeaRunConfigs.TEMPLATE_REVISION` whenever the generated XML changes, or existing files stay stale.
 - **The mods path is always `<gameDataDir>/mods`**, created on demand. Unset, the data directory is
-  `MINDUSTRY_DATA_DIR` or the per-OS default and the plugin passes no JVM property — only a directory the
+  `MINDUSTRY_DATA_DIR` or the per-OS default (on Android the platform branch wins over the variable, which
+  cannot reach an APK) and the plugin passes no JVM property — only a directory the
   build *sets* is passed as `-Dmindustry.data.dir`, since the game already honors the other two. An older
   game version only warns. There is no project-local shorthand: `gameDataDir` is the single knob, and a
   multi-project build sets it per project.
@@ -137,10 +138,16 @@ logging/               RunLogging (the log tee and the cleanup BuildService)
   `PREFIX` inside `com.termux`) as Android. Architecture is deliberately not part of it. `GameDataDir` has an
   Android branch — `/storage/emulated/0/Android/data/<appId>/files`, what `AndroidLauncher` sets — because
   `os.name` says "Linux" there and the desktop path is wrong. On the APK both `MINDUSTRY_DATA_DIR` and
-  `-Dmindustry.data.dir` are dead, so the warning must say that instead of suggesting them. Android gets no
+  `-Dmindustry.data.dir` are dead, so `GameDataDir.resolve` takes the Android branch *before* the
+  environment variable — honouring it would deploy the mod where the game never looks — and the warning
+  says the variable is ignored. Android gets no
   `.run/*.xml` and exactly one lifecycle hint, never an edit to the user's build settings.
 - **On Android `runMindustry` stages instead of launching**: it copies the artifacts into
-  `run.androidStagingDir` for the game's import dialog, with best-effort `am force-stop`/`am start`, and
+  `run.androidStagingDir` — the shared Download directory by default, because the game's file picker only
+  shows shared storage, with the Termux-private `$HOME/AndroidStaging` as the fallback for a device where
+  that volume is unusable, which the run warns about (`AndroidStaging` owns that choice) — for the game's
+  import dialog, with best-effort `am force-stop`/`am start` (force-stop only stops the game; importing is
+  always a manual step), and
   fails loudly when a debugger is requested (no JDWP on the Android runtime) or when `useDeployRun` is off
   (the APK only loads classes.dex). `run.useHeadlessServer` is the path that actually runs there.
 - **The `runMindustry` registration happens at apply time, and the Android behavior is attached in

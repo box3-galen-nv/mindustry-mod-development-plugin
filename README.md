@@ -343,8 +343,7 @@ Two findings worth knowing, both verified against the game:
   launcher sets the data directory itself, and nothing can pass JVM arguments to an APK.
 
 **Running on Android.** `runMindustry` stages each built jar into `run.androidStagingDir` (default
-`$HOME/AndroidStaging`), tells you to use **Mods → Import mod**, and calls `am force-stop` so the game picks
-the file up on its next start; `run.androidLaunchApk = true` also runs `am start`. A missing or refusing `am`
+`/sdcard/Download`, or `$HOME/AndroidStaging` when Termux has no storage access), tells you to use **Mods → Import mod**, and calls `am force-stop` so nothing keeps the staged jar open; `run.androidLaunchApk = true` also runs `am start`. A missing or refusing `am`
 is only a warning. Staging is all this needs: there is no JVM to launch, because the APK's launcher takes no
 JVM arguments and no other app may write into its `Android/data` directory for you. Requesting a debugger on
 Android fails with an explanation, since the Android runtime has no JDWP socket.

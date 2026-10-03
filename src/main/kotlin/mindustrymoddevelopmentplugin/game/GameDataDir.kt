@@ -43,14 +43,16 @@ internal object GameDataDir {
         hostPlatform: HostPlatform = HostPlatform.detect(),
         androidAppId: String = ANDROID_APP_ID,
     ): File {
-        if (!env.isNullOrBlank()) return File(env)
-
         /*
-        Android comes first because `os.name` says "Linux" there too, which would give the desktop path.
-        The client ignores both MINDUSTRY_DATA_DIR and -Dmindustry.data.dir: AndroidLauncher sets the data
-        directory to getExternalFilesDir(null) unconditionally, and that is this path.
+        Android comes first, before the environment variable, because neither the variable nor the JVM
+        property reaches an APK's launcher: AndroidLauncher sets the data directory to
+        getExternalFilesDir(null) unconditionally. Honouring the variable here would aim the deployment at
+        a directory the game never reads, and `os.name` says "Linux" there too, so the desktop path would
+        be wrong as well. The caller reports the variable as ignored.
         */
         if (hostPlatform == HostPlatform.Android) return androidDataDir(androidAppId)
+
+        if (!env.isNullOrBlank()) return File(env)
 
         val os = osName.lowercase()
         return when {

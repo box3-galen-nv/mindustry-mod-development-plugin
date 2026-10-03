@@ -53,11 +53,14 @@ internal object RootWiring {
         run.headlessServerWorkingDir.convention(
             project.layout.dir(project.provider { File(project.rootProject.projectDir, "build/headless") }),
         )
-        // Staging goes to the home directory rather than /sdcard: it is Termux-private, has no path length
-        // or shared-storage permission problems, and the game's import dialog can read it.
+        /*
+        The staged jar has to be somewhere the *game's* file picker can reach, because importing it is a
+        manual step inside the game: the picker only shows shared storage, so a Termux-private directory
+        under the home directory is the fallback rather than the default. See AndroidStaging.
+        */
         run.androidStagingDir.convention(
             project.layout.dir(
-                project.provider { File(System.getProperty("user.home"), "AndroidStaging") },
+                project.provider { AndroidStaging.defaultDir(File(System.getProperty("user.home"))) },
             ),
         )
 
@@ -271,6 +274,12 @@ internal object RootWiring {
                         appId = run.androidAppId.get(),
                         stagingDir = run.androidStagingDir.get().asFile,
                         launchApk = run.androidLaunchApk.get(),
+                        // Resolved here: the action holds plain values and cannot ask the
+                        // file system itself.
+                        privateStagingFallback = AndroidStaging.isPrivateFallback(
+                            run.androidStagingDir.get().asFile,
+                            File(System.getProperty("user.home")),
+                        ),
                     ),
                 )
             }

@@ -320,7 +320,7 @@ org.gradle.jvmargs=-Xmx1g
   而且无法给 APK 传 JVM 参数。
 
 **在 Android 上运行。** `runMindustry` 会把每个构建好的 jar 暂存到 `run.androidStagingDir`（默认
-`$HOME/AndroidStaging`），提示你用 **模组 → 导入模组**，并调用 `am force-stop` 让游戏下次启动时读到该文件；
+`/sdcard/Download`；Termux 没有存储权限时回落 `$HOME/AndroidStaging`），提示你用 **模组 → 导入模组**，并调用 `am force-stop`，以免有进程占着暂存的 jar。导入这一步仍然要你自己完成 —— 只有游戏本身能把模组加进去。
 `run.androidLaunchApk = true` 还会执行 `am start`。找不到 `am` 或它拒绝执行都只是告警 —— 暂存本身就是全部所需：
 这里没有 JVM 可启动，因为 APK 的启动器不接受 JVM 参数，而且没有别的应用能替你写入它的 `Android/data` 目录。
 在 Android 上请求调试会直接失败并说明原因（Android 运行时没有 JDWP 套接字）。

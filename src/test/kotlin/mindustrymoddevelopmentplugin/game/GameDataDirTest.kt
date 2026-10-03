@@ -92,9 +92,12 @@ class GameDataDirTest {
     }
 
     @Test
-    fun `an explicit environment variable still wins on android`() {
+    fun `android ignores the environment variable`() {
+        // MINDUSTRY_DATA_DIR cannot reach an APK's launcher and AndroidLauncher overwrites the data
+        // directory, so honouring it here would deploy the mod where the game never looks. The plugin
+        // reports the variable as ignored instead.
         assertResolves(
-            File("/tmp/forced"),
+            File("/storage/emulated/0/Android/data/io.anuke.mindustry/files"),
             GameDataDir.resolve(
                 env = "/tmp/forced",
                 osName = "Linux",
