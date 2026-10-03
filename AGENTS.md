@@ -141,7 +141,7 @@ logging/               RunLogging (the log tee and the cleanup BuildService)
   `.run/*.xml` and exactly one lifecycle hint, never an edit to the user's build settings.
 - **On Android `runMindustry` stages instead of launching**: it copies the artifacts into
   `run.androidStagingDir` for the game's import dialog, with best-effort `am force-stop`/`am start`, and
-  fails loudly when a debugger is requested (no JWDP on the Android runtime) or when `useDeployRun` is off
+  fails loudly when a debugger is requested (no JDWP on the Android runtime) or when `useDeployRun` is off
   (the APK only loads classes.dex). `run.useHeadlessServer` is the path that actually runs there.
 - **The `runMindustry` registration happens at apply time, and the Android behavior is attached in
   `afterEvaluate`**: `run { }` is evaluated after `apply()`, so deciding the task type there would always
