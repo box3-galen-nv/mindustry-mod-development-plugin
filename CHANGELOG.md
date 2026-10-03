@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- Copying the built mod jars into the game's mods directory is its own task, `copyMods`, which
+  `runMindustry` depends on: it can be run alone, it is UP-TO-DATE while the jars are unchanged, and it
+  no longer hides a write into the game directory inside the launch task.
 - The Android SDK download is now its own task, `downloadAndroidSdk`, which `jarAndroid` depends on.
 - `download.androidSdkDownloadPlatformOnly` (default off) lets a Termux setup with `pkg install d8`
   install just the platform packages, so `android.jar` can reach d8's desugaring classpath without

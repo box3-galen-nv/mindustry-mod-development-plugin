@@ -95,7 +95,7 @@ logging/               RunLogging (the log tee and the cleanup BuildService)
   while configuring. Verify a change by running a task twice with `--configuration-cache` and requiring
   `stored` and then `reused`.
 - **`runMindustry` declares no inputs/outputs on purpose**: it launches the game, so UP-TO-DATE would
-  skip the launch. It depends only on `downloadMindustry` + `clearMods`; packaging is the user's call
+  skip the launch. It depends on `downloadMindustry`, then `clearMods`, then `copyMods` (which is *not* the same as packaging, and copies the built jars into the game's mods directory, UP-TO-DATE while nothing changed); packaging is the user's call
   (`gradle deploy runMindustry`, or their own `dependsOn`). A bare task name matches *every* project,
   so `:runMindustry` targets exactly one.
 - **`.run/` is written by the `generateIdeaRunConfigs` task**, never during configuration. Bump
@@ -179,6 +179,12 @@ logging/               RunLogging (the log tee and the cleanup BuildService)
   from one the user put there (never replaced, only reported when it cannot be a jar). `clearMods`
   matches the deployment tag plus a regex derived from `build.format`, and deletes nothing when the mod name
   cannot be resolved.
+- **Writing into the game's mods directory is its own task**, `copyMods`: it used to happen inside
+  `runMindustry`'s action, where it could not be run alone, could never be UP-TO-DATE, and hid a write
+  into the user's game directory inside a task whose stated job is to launch the game. It declares the
+  mod jars as inputs and the tagged targets as outputs, skips (with a warning naming the packaging
+  task) any mod that has not been built, and `mustRunAfter("clearMods")` so the previous tagged files
+  are removed first. `meta/ModArtifact` is the plain value it and `runMindustry` are given.
 - **The mod-project scan** (`(listOf(rootProject) + rootProject.subprojects).filter { it.tasks.findByName("deploy") is Jar }`)
   must run at task-realization time, not in `afterEvaluate`, or the root `runMindustry` silently deploys
   nothing. The root project is included because single-project mode makes it the mod, and the `is Jar` test

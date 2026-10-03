@@ -1,6 +1,7 @@
 package mindustrymoddevelopmentplugin.tasks
 
 import mindustrymoddevelopmentplugin.logging.RunLogging
+import mindustrymoddevelopmentplugin.meta.ModArtifact
 import org.gradle.api.provider.Provider
 import java.io.BufferedOutputStream
 import java.io.File
@@ -50,14 +51,6 @@ internal object RunMindustryTask {
         /** The task that provides [jar]. */
         val downloadTaskName: String = "downloadHeadlessServer",
     )
-
-    /**
-     * One mod's built artifact, resolved while configuring.
-     *
-     * Plain values on purpose: the actions copy these jars into the mods directory, and holding the projects
-     * (or the tasks) they came from would stop the configuration cache from serializing `runMindustry`.
-     */
-    class ModArtifact(val name: String, val jar: File, val packagingCommand: String)
 
     /**
      * What running means on Android: stage the built jar and let the game import it.
@@ -195,11 +188,9 @@ internal object RunMindustryTask {
 
     fun configure(
         task: JavaExec,
-        mods: List<ModArtifact>,
         downloadPath: File,
         modsDir: File,
         project: Project,
-        deployTag: String,
         maxLogFiles: Int = MindustryDebugConfig.DEFAULT_MAX_LOG_FILES,
         enableRunLogging: Boolean = MindustryDebugConfig.DEFAULT_ENABLE_RUN_LOGGING,
         dataDir: File? = null,
@@ -207,7 +198,6 @@ internal object RunMindustryTask {
         headless: HeadlessOptions? = null,
         logCleanup: Provider<RunLogging.CleanupService>? = null,
     ) {
-        val prefix = "[$deployTag]"
         // Resolved while configuring: an action may not reach into the project for it.
         val logDir = project.layout.buildDirectory.dir("logger").get().asFile
 
@@ -291,19 +281,6 @@ internal object RunMindustryTask {
                 )
             }
 
-            mods.forEach { mod ->
-                if (!mod.jar.exists()) {
-                    task.logger.warn(
-                        "Skipping mod '${mod.name}': ${mod.jar.path} does not exist yet. Build it first " +
-                        "(./gradlew ${mod.packagingCommand}), pass it on the command line " +
-                        "(./gradlew ${mod.packagingCommand} runMindustry), or add " +
-                        "tasks.named(\"runMindustry\") { dependsOn(\"${mod.packagingCommand}\") }."
-                    )
-                    return@forEach
-                }
-
-                mod.jar.copyTo(File(modsDir, "$prefix${mod.jar.name}"), overwrite = true)
-            }
 
             /*
             Write the game output to a log file in build/logger/ (tee to console).

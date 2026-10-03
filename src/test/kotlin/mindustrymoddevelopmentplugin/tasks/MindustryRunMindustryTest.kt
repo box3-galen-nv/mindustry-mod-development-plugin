@@ -27,11 +27,9 @@ class MindustryRunMindustryTest {
         val task = project.tasks.register("runMindustry", JavaExec::class.java).get()
         RunMindustryTask.configure(
             task = task,
-            mods = emptyList(),
             downloadPath = File(project.projectDir, "game.jar"),
             modsDir = File(project.projectDir, "mods"),
             project = project,
-            deployTag = "d",
             maxLogFiles = 25,
             enableRunLogging = enableRunLogging,
             dataDir = dataDir,
@@ -217,11 +215,9 @@ class MindustryRunMindustryTest {
         val task = project.tasks.register("runMindustry", JavaExec::class.java).get()
         RunMindustryTask.configure(
             task = task,
-            mods = emptyList(),
             downloadPath = File(project.projectDir, "game.jar"),
             modsDir = File(dataDir, "mods"),
             project = project,
-            deployTag = "d",
             enableRunLogging = false,
             dataDir = dataDir,
         )
@@ -240,11 +236,9 @@ class MindustryRunMindustryTest {
         val task = project.tasks.register("runMindustry", JavaExec::class.java).get()
         RunMindustryTask.configure(
             task = task,
-            mods = emptyList(),
             downloadPath = File(project.projectDir, "game.jar"),
             modsDir = File(project.projectDir, "mods"),
             project = project,
-            deployTag = "d",
             enableRunLogging = false,
             dataDir = dataDir,
         )
@@ -269,11 +263,9 @@ class MindustryRunMindustryTest {
 
         RunMindustryTask.configure(
             task = task,
-            mods = listOf(RunMindustryTask.ModArtifact("sub", File(project.projectDir, "sub.jar"), ":sub:deploy")),
             downloadPath = File(project.projectDir, "game.jar"),
             modsDir = File(project.projectDir, "mods"),
             project = project,
-            deployTag = "d",
             enableRunLogging = false,
         )
 

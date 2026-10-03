@@ -69,4 +69,19 @@ internal class RunTaskIntegrationTest : TestKitFixture() {
             mindustryMod { modMeta { name = "sub-mod"; version = "1.0"; java = true } }
         """)
     }
+    @Test
+    fun `runMindustry depends on copyMods, which can be run on its own`() {
+        // The copy used to live inside runMindustry's own action: it could not be run alone and could never
+        // be UP-TO-DATE. The dependency is what keeps the launch working after the move.
+        writeMultiProjectFixture()
+        write("sub/Mod.java", "package submod;\npublic class Mod {}\n")
+
+        val graph = runner().withArguments("runMindustry", "--dry-run").build()
+        assertTrue(graph.output.contains(":copyMods"), "runMindustry must depend on the copy:\n${graph.output}")
+
+        val alone = runner().withArguments("copyMods").build()
+        assertTrue(alone.task(":copyMods")?.outcome == TaskOutcome.SUCCESS, alone.output)
+    }
+
+
 }

@@ -1,6 +1,7 @@
 package mindustrymoddevelopmentplugin.tasks
 
 import java.io.File
+import mindustrymoddevelopmentplugin.meta.ModArtifact
 import org.gradle.api.tasks.bundling.Jar
 import org.gradle.testfixtures.ProjectBuilder
 import org.junit.jupiter.api.Assertions.assertTrue
@@ -28,7 +29,7 @@ class AndroidStagingTest {
 
         RunMindustryTask.configureAndroid(
             task,
-            mods = listOf(RunMindustryTask.ModArtifact("mod", File(libs, "mod.jar"), ":deploy")),
+            mods = listOf(ModArtifact("mod", File(libs, "mod.jar"), ":deploy")),
             deployTag = "mm-deploy",
             options = RunMindustryTask.AndroidOptions(
                 appId = "io.anuke.mindustry",

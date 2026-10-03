@@ -7,8 +7,10 @@ import mindustrymoddevelopmentplugin.dsl.MindustryRunConfig
 import mindustrymoddevelopmentplugin.game.GameDataDir
 import mindustrymoddevelopmentplugin.game.MindustryApi
 import mindustrymoddevelopmentplugin.platform.HostPlatform
+import mindustrymoddevelopmentplugin.meta.ModArtifact
 import mindustrymoddevelopmentplugin.tasks.CheckAndroidApkVersionTask
 import mindustrymoddevelopmentplugin.tasks.ClearModsTask
+import mindustrymoddevelopmentplugin.tasks.CopyModsTask
 import mindustrymoddevelopmentplugin.tasks.DownloadAndroidApkTask
 import mindustrymoddevelopmentplugin.tasks.DownloadAndroidSdkTask
 import mindustrymoddevelopmentplugin.tasks.DownloadMindustryTask
@@ -228,9 +230,32 @@ internal object RootWiring {
                 )
         }
 
+        /*
+        copyMods writes the built jars into the game's own mods directory. It is its own task so it can be
+        run alone, so the write is UP-TO-DATE while nothing changed, and so runMindustry — whose job is to
+        launch the game — no longer hides a write into the user's game directory inside its own action. It
+        runs after clearMods, which removes the previous tagged files, and runMindustry depends on both.
+        */
+        project.tasks.register("copyMods") { task ->
+            val resolvedModsDir = if (run.useHeadlessServer.get()) {
+                File(File(run.headlessServerWorkingDir.get().asFile, "config"), "mods")
+            } else {
+                modsDir.get()
+            }
+            CopyModsTask.configure(
+                task,
+                modArtifacts(modProjects.get(), if (run.useDeployRun.get()) "deploy" else "jar"),
+                resolvedModsDir,
+                run.deployTag.get(),
+            )
+            task.mustRunAfter("clearMods")
+        }
+
         project.tasks.register("runMindustry", JavaExec::class.java) { task ->
             task.group = MindustryModPlugin.MINDUSTRY_GROUP
             task.description = "Deploys the built mods and launches the game."
+            // copyMods does the copying; this task is left with logging, the data dir and the launch.
+            task.dependsOn("copyMods")
             val resolvedDataDir = chosenDataDir.orNull
             if (resolvedDataDir != null) {
                 warnIfDataDirUnsupported(project, download.mindustryDownloadVersion.get())
@@ -259,9 +284,7 @@ internal object RootWiring {
                 ?.let { File(File(it.workingDir, "config"), "mods") }
                 ?: modsDir.get()
             RunMindustryTask.configure(
-                task, modArtifacts(modProjects.get(), if (run.useDeployRun.get()) "deploy" else "jar"),
-                downloadPath.get(), resolvedModsDir, project,
-                run.deployTag.get(),
+                task, downloadPath.get(), resolvedModsDir, project,
                 debug.maxLogFiles.get(), debug.enableRunLogging.get(),
                 dataDir = resolvedDataDir,
                 // Registered on demand and shared per build, so no plumbing is needed.
@@ -421,10 +444,10 @@ internal object RootWiring {
      * The task actions copy these jars, so they must not hold the projects or the packaging tasks — the
      * configuration cache cannot serialize those.
      */
-    private fun modArtifacts(projects: List<Project>, deployTaskName: String): List<RunMindustryTask.ModArtifact> =
+    private fun modArtifacts(projects: List<Project>, deployTaskName: String): List<ModArtifact> =
         projects.map { sub ->
             val jarTask = sub.tasks.named(deployTaskName, Jar::class.java).get()
-            RunMindustryTask.ModArtifact(
+            ModArtifact(
                 name = sub.name,
                 jar = jarTask.archiveFile.get().asFile,
                 // The task's own path: the root project's path is ":", which would print "::deploy".

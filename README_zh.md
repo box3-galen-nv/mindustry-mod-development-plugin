@@ -122,7 +122,7 @@ project/
 | `download.androidSdkDownloadPackages` | `List<String>` | `["platforms;android-34", "build-tools;34.0.0"]` | 要下载并安装的 `sdkmanager` 包 |
 | `download.androidSdkDownloadTimeoutMinutes` | `Long` | `30` | 工具与每次 `sdkmanager` 调用的**下载**超时，单位分钟（不是运行超时） |
 | `download.androidSdkExtraArgs` | `List<String>` | `[]` | 透传给 `sdkmanager` 的额外参数 —— 它没有"指定仓库地址"的开关，镜像只能按 HTTP 代理传 |
-| `run.gameDataDir` | `Directory` | `MINDUSTRY_DATA_DIR`, else the per-OS Mindustry directory | 游戏数据目录；mods 目录跟随它（`<gameDataDir>/mods`）。设置它会传 `-Dmindustry.data.dir` |
+| `run.gameDataDir` | `Directory` | `MINDUSTRY_DATA_DIR`, else the per-OS Mindustry directory | 游戏数据目录；mods 目录跟随它（`<gameDataDir>/mods`）。设置它会传 `-Dmindustry.data.dir` | 把 jar 复制进去这一步是独立任务 `copyMods`：可以单独运行它来只部署不启动，并且在 jar 与 deploy tag 未变时会报告 UP-TO-DATE。`runMindustry` 依赖它和 `clearMods`，顺序为先清理后复制，所以每次启动用的都是刚复制好的那批文件。
 | `run.deployTag` | `String` | `"mm-deploy"` | 标记本插件部署的 jar（`[mm-deploy]…`） |
 | `run.cleanDeployedFiles` | `Boolean` | `true` | 再次部署前删除本插件先前部署的文件 |
 | `run.useDeployRun` | `Boolean` | `true` | 拷贝合并后的 `deploy` 包而非 `jar`（只决定拷哪个产物；`runMindustry` 不会依赖该任务） |
