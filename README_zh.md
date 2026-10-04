@@ -11,7 +11,7 @@
 
 ### 引入插件
 
-插件发布在 [Gradle Plugin Portal](https://plugins.gradle.org/) 上，Gradle 默认就会去那里找，因此**无需**为它声明仓库。配置缓存**已支持**：构建会复用已存的缓存条目，可以放心开启 `--configuration-cache`（或 `org.gradle.configuration-cache=true`）。
+插件发布在 [Gradle Plugin Portal](https://plugins.gradle.org/) 上，Gradle 默认就会去那里找，因此**无需**为它声明仓库。配置缓存**已支持**：构建会复用已存的缓存条目，可以放心开启 `--configuration-cache`（或 `org.gradle.configuration-cache=true`）。 运行 `./gradlew mindustryModInfo` 可以得到一屏「本构建检测到什么」的报告：配置值与实际检测到的主机平台、Termux 状态、操作系统与 JVM、Gradle、编辑器与 CI 线索、解析出的数据目录与 mods 目录、将启动桌面 jar 还是无头服务器、找到的 Android SDK 与 d8、以及已构建的 jar。编辑器与终端两行是启发式，报告会写明每个线索来自哪个变量；工程里的 .idea、.vscode 或 .run 目录则是证据。
 
 ```kotlin
 // build.gradle.kts (root)

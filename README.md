@@ -11,7 +11,7 @@ Handles mod metadata generation, jar packaging, Android DEX compilation, and gam
 
 ### Apply the plugin
 
-The plugin is published on the [Gradle Plugin Portal](https://plugins.gradle.org/), which Gradle already
+The plugin is published on the [Gradle Plugin Portal](https://plugins.gradle.org/), which Gradle already Run `./gradlew mindustryModInfo` for a one-screen report of what this build detected: the configured and detected host platform, Termux state, OS and JVM, Gradle, editor and CI hints, the data and mods directories it resolved, whether it will launch the desktop jar or the headless server, the Android SDK and `d8` it found, and which jars are built. The editor and terminal lines are heuristics and the report names the variable behind each one, while an `.idea`, `.vscode` or `.run` directory in the project is evidence.
 searches, so no repository has to be declared for it. The configuration cache is supported: a build reuses its stored entry, so `--configuration-cache` (or `org.gradle.configuration-cache=true`) is fine to turn on.
 
 ```kotlin
