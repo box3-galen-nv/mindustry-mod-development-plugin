@@ -11,7 +11,7 @@ import mindustrymoddevelopmentplugin.platform.HostPlatform
 import mindustrymoddevelopmentplugin.meta.ModArtifact
 import mindustrymoddevelopmentplugin.platform.DeveloperEnvironment
 import mindustrymoddevelopmentplugin.sdk.AndroidSdk
-import mindustrymoddevelopmentplugin.tasks.MindustryModInfoTask
+import mindustrymoddevelopmentplugin.tasks.DetectEnvTask
 import mindustrymoddevelopmentplugin.tasks.CheckAndroidApkVersionTask
 import mindustrymoddevelopmentplugin.tasks.ClearModsTask
 import mindustrymoddevelopmentplugin.tasks.CopyModsTask
@@ -259,11 +259,11 @@ internal object RootWiring {
         The environment report. Everything is resolved here, while configuring, so the action holds only
         plain values: which paths this build chose is exactly the kind of thing a user cannot see otherwise.
         */
-        project.tasks.register("mindustryModInfo") { task ->
+        project.tasks.register("detectEnv") { task ->
             val android = ModWiring.androidOptions(project, project.extensions.findByType(MindustryModRootExtension::class.java))
             val sdkDir = android.androidSdkDir?.orNull?.asFile
             val foundSdk = AndroidSdk.findAndroidSdkDir(sdkDir)
-            MindustryModInfoTask.configure(
+            DetectEnvTask.configure(
                 task,
                 environment = DeveloperEnvironment.describe(
                     projectDir = project.projectDir,
@@ -291,6 +291,7 @@ internal object RootWiring {
                     "d8: " + (android.d8Command?.joinToString(" ") ?: "not found"),
                 ),
                 libsDir = project.layout.buildDirectory.dir("libs").get().asFile,
+                reportFile = project.layout.buildDirectory.file("mindustry-mod-env.txt").get().asFile,
             )
         }
 

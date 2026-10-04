@@ -2,7 +2,7 @@
 
 ## Unreleased
 
-- `mindustryModInfo` reports the environment a build detected: configured and detected host platform, Termux
+- `detectEnv` reports the environment a build detected: configured and detected host platform, Termux
   state, OS and JVM, Gradle, editor and CI hints, the resolved data and mods directories, the Android SDK
   and d8 it found, and the jars that are built. Editor hints are labelled as heuristics, while
   .idea/.vscode/.run directories count as evidence.

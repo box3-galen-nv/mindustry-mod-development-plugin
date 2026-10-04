@@ -30,7 +30,7 @@ MindustryModPlugin.kt   entry point: apply() and the afterEvaluate hooks — the
 game/                   MindustryApi (the game API dependency), GameDataDir (its data directory)
 platform/               HostPlatform (Auto/Desktop/Android + Termux detection), TargetPlatform
                         (Jar/Android/All, the suffix a modVersion() is named for), DeveloperEnvironment
-                        (the OS/JVM/editor/CI report mindustryModInfo prints)
+                        (the OS/JVM/editor/CI report detectEnv prints)
 meta/                   ModMeta (19 engine fields), ModFileReader (the engine's 4 metadata files),
                         ArtifactNaming (artifact names from build.format / modMeta)
 dsl/                    the public DSL and *only* the DSL: the two extensions
@@ -99,7 +99,7 @@ logging/               RunLogging (the log tee and the cleanup BuildService)
   skip the launch. It depends on `downloadMindustry`, then `clearMods`, then `copyMods` (which is *not* the same as packaging, and copies the built jars into the game's mods directory, UP-TO-DATE while nothing changed); packaging is the user's call
   (`gradle deploy runMindustry`, or their own `dependsOn`). A bare task name matches *every* project,
   so `:runMindustry` targets exactly one.
-- **`mindustryModInfo` reports the environment** (`platform/DeveloperEnvironment`), and everything it prints
+- **`detectEnv` reports the environment** (`platform/DeveloperEnvironment`), and everything it prints
   is resolved while configuring, so its action holds plain values. It reports the configured *and* the
   detected host platform, because "auto" alone tells the user nothing. The editor and terminal lines are
   labelled heuristics and the report names the variable behind each one; an `.idea`, `.vscode` or `.run`
