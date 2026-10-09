@@ -167,8 +167,9 @@ logging/               RunLogging (the log tee and the cleanup BuildService)
   `run.androidStagingDir` — the shared Download directory by default, because the game's file picker only
   shows shared storage, with the Termux-private `$HOME/AndroidStaging` as the fallback for a device where
   that volume is unusable, which the run warns about (`AndroidStaging` owns that choice) — for the game's
-  import dialog, with best-effort `am force-stop`/`am start` (force-stop only stops the game; importing is
-  always a manual step), and
+  import dialog, and by default launches the installed game (`run.androidLaunchApk`, default true — on Android
+  the run *is* starting the game) with best-effort `am force-stop` then `am start` (force-stop only stops it;
+  importing is always a manual step), and
   fails loudly when a debugger is requested (no JDWP on the Android runtime) or when `useDeployRun` is off
   (the APK only loads classes.dex). `run.useHeadlessServer` is the path that actually runs there.
 - **The `runMindustry` registration happens at apply time, and the Android behavior is attached in
