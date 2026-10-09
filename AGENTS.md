@@ -171,7 +171,7 @@ logging/               RunLogging (the log tee and the cleanup BuildService)
   the run *is* starting the game) with best-effort `am force-stop` then `am start` (force-stop only stops it;
   importing is always a manual step), and
   fails loudly when a debugger is requested (no JDWP on the Android runtime) or when `useDeployRun` is off
-  (the APK only loads classes.dex). `run.useHeadlessServer` is the path that actually runs there.
+  (the APK only loads classes.dex).
 - **The `runMindustry` registration happens at apply time, and the Android behavior is attached in
   `afterEvaluate`**: `run { }` is evaluated after `apply()`, so deciding the task type there would always
   read the default — that bug registered a JavaExec on Android, downloaded the desktop jar and launched it.
@@ -185,12 +185,9 @@ logging/               RunLogging (the log tee and the cleanup BuildService)
   the action flags) *before* downloading the tools.
 - **`downloadMindustry` is not usable on Android and says so**: invoking it there warns that the desktop
   client it fetches cannot be launched (Arc ships no SDL backend for Linux on aarch64), that the download
-  itself would work, and which routes do. The warning is decided by *which task ran*, never by which asset
-  it fetched, which is why `downloadHeadlessServer` is its own task object
-  (`tasks/DownloadHeadlessServerTask`) that reuses `DownloadMindustryTask.fetch` and the shared wiring with
-  `warnOnAndroid = false`: the server jar is self-contained with linux/aarch64 natives and is the one route
-  that runs on Android, so warning about it would be false. The warning fires in the action rather than at
-  configuration, so `./gradlew tasks` stays quiet on Termux.
+  itself would work, and that `jarAndroid` plus the run's staging is the route to the game on the phone. The
+  warning is unconditional there — there is no second task for it to be wrong about. It fires in the action
+  rather than at configuration, so `./gradlew tasks` stays quiet on Termux.
 - **Downloads**: `downloadMindustry` is the plugin's own downloader — no third-party download plugin is
   applied or depended on. It streams to `<name>.part`, checks the zip signature, then moves the file into
   place, and records the URL in a `<name>.url` stamp. That stamp is what separates a jar this build
@@ -221,8 +218,9 @@ logging/               RunLogging (the log tee and the cleanup BuildService)
 - Termux ships the **unmodified** Gradle 9.8.0 zip: `packages/gradle/build.sh` has the same
   `TERMUX_PKG_SHA256` as our wrapper pin and no patches, so 9.8 on aarch64 Android is distribution-verified.
   Termux's main repo also has `d8 37.0.0`, `kotlin 2.4.20`, `openjdk-17/21` — and no `jdtls`.
-- `server-release.jar` (v147+) is self-contained with `linux/aarch64` natives, so the headless path has no
-  native gap on Termux; `dependencies.jar` only exists from v159.7; the desktop `Mindustry.jar` has no
+- `server-release.jar` (v147+) is self-contained with `linux/aarch64` natives — the plugin no longer
+  downloads or runs it, but that is why a server jar started by hand works on Termux;
+  `dependencies.jar` only exists from v159.7; the desktop `Mindustry.jar` has no
   Linux aarch64 SDL backend at all, which is why the GUI cannot run there.
 - Game API: one content-filtered Ivy repository over the GitHub release assets. `be` →
   `MindustryBuilds` `master/latest.jar`; `latest` / `>= 155.4` → `dependencies.jar`;
