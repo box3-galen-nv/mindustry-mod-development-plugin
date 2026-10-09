@@ -27,7 +27,7 @@ import mindustrymoddevelopmentplugin.MindustryModPlugin
 
 /**
  * Everything the root project owns: the download, clear and run tasks, the conventions the DSL
- * relies on, and the warnings about the data directory, Android builds and a headless mismatch.
+ * relies on, and the warnings about the data directory and Android builds.
  */
 internal object RootWiring {
 
@@ -277,7 +277,7 @@ internal object RootWiring {
                 if (!run.useDeployRun.get()) {
                     throw GradleException(
                         "run.useDeployRun = false cannot work on Android: the APK only loads classes.dex, which " +
-                        "only the merged 'deploy' artifact contains. Turn it back on, or use the headless server."
+                        "only the merged 'deploy' artifact contains. Turn it back on."
                     )
                 }
                 warnAboutAndroidBuildDefaults(project, run)
@@ -305,7 +305,7 @@ internal object RootWiring {
         // root's `.run/`, so a subproject must not overwrite them with its own defaults.
         if (project == project.rootProject) {
             // IDEA's .run/*.xml describes a desktop JVM: on Android the editor is Neovim/jdtls and the
-            // debugger attaches to a headless server, so generating them would only be noise.
+            // debugger attaches over JDWP on the desktop, so generating them would only be noise.
             if (run.hostPlatform.get() != HostPlatform.Android) {
                 project.tasks.register("generateIdeaRunConfigs") { task ->
                     // The generated configuration runs the packaging task before `runMindustry`, because the
