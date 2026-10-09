@@ -1,6 +1,7 @@
-package mindustrymoddevelopmentplugin.meta
+package mindustrymoddevelopmentplugin.dsl
 
 import java.util.Locale
+import mindustrymoddevelopmentplugin.meta.ModFileReader
 
 /**
  * Mod metadata, mirroring the engine's `Mods.ModMeta` (`Mods.java:1424`) field by field.

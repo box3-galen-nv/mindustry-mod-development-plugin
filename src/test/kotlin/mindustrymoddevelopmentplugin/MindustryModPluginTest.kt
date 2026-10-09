@@ -3,7 +3,7 @@ package mindustrymoddevelopmentplugin
 import mindustrymoddevelopmentplugin.wiring.ModWiring
 import mindustrymoddevelopmentplugin.game.MindustryApi
 import mindustrymoddevelopmentplugin.dsl.MindustryModRootExtension
-import mindustrymoddevelopmentplugin.meta.ModMeta
+import mindustrymoddevelopmentplugin.dsl.ModMeta
 import java.io.File
 import org.gradle.api.GradleException
 import org.gradle.api.Project

@@ -2,7 +2,7 @@ package mindustrymoddevelopmentplugin.tasks
 
 import java.io.File
 import mindustrymoddevelopmentplugin.meta.ModFileReader
-import mindustrymoddevelopmentplugin.meta.ModMeta
+import mindustrymoddevelopmentplugin.dsl.ModMeta
 import org.gradle.api.Task
 
 /**

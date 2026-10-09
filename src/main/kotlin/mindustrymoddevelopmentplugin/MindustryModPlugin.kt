@@ -2,7 +2,7 @@ package mindustrymoddevelopmentplugin
 
 import mindustrymoddevelopmentplugin.dsl.MindustryModExtension
 import mindustrymoddevelopmentplugin.meta.ModFileReader
-import mindustrymoddevelopmentplugin.meta.ModMeta
+import mindustrymoddevelopmentplugin.dsl.ModMeta
 import mindustrymoddevelopmentplugin.wiring.RootWiring
 import mindustrymoddevelopmentplugin.wiring.ModWiring
 import mindustrymoddevelopmentplugin.logging.RunLogging

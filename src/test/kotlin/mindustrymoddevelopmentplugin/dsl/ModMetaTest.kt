@@ -1,4 +1,4 @@
-package mindustrymoddevelopmentplugin.meta
+package mindustrymoddevelopmentplugin.dsl
 
 import kotlin.reflect.KMutableProperty1
 import kotlin.reflect.KType
@@ -6,6 +6,7 @@ import kotlin.reflect.full.memberProperties
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
+import mindustrymoddevelopmentplugin.meta.ModFileReader
 
 class ModMetaTest {
 
