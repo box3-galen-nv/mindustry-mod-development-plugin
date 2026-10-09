@@ -2,16 +2,12 @@ package mindustrymoddevelopmentplugin.wiring
 
 import java.io.File
 import mindustrymoddevelopmentplugin.dsl.MindustryDownloadConfig
-import mindustrymoddevelopmentplugin.dsl.MindustryModExtension
 import mindustrymoddevelopmentplugin.dsl.MindustryModRootExtension
 import mindustrymoddevelopmentplugin.dsl.MindustryRunConfig
 import mindustrymoddevelopmentplugin.game.GameDataDir
 import mindustrymoddevelopmentplugin.game.MindustryApi
 import mindustrymoddevelopmentplugin.platform.HostPlatform
 import mindustrymoddevelopmentplugin.meta.ModArtifact
-import mindustrymoddevelopmentplugin.platform.DeveloperEnvironment
-import mindustrymoddevelopmentplugin.sdk.AndroidSdk
-import mindustrymoddevelopmentplugin.tasks.DetectEnvTask
 import mindustrymoddevelopmentplugin.tasks.CheckAndroidApkVersionTask
 import mindustrymoddevelopmentplugin.tasks.ClearModsTask
 import mindustrymoddevelopmentplugin.tasks.CopyModsTask
@@ -253,46 +249,6 @@ internal object RootWiring {
                 run.deployTag.get(),
             )
             task.mustRunAfter("clearMods")
-        }
-
-        /*
-        The environment report. Everything is resolved here, while configuring, so the action holds only
-        plain values: which paths this build chose is exactly the kind of thing a user cannot see otherwise.
-        */
-        project.tasks.register("detectEnv") { task ->
-            val android = ModWiring.androidOptions(project, project.extensions.findByType(MindustryModRootExtension::class.java))
-            val sdkDir = android.androidSdkDir?.orNull?.asFile
-            val foundSdk = AndroidSdk.findAndroidSdkDir(sdkDir)
-            DetectEnvTask.configure(
-                task,
-                environment = DeveloperEnvironment.describe(
-                    projectDir = project.projectDir,
-                    hostPlatform = run.hostPlatform.get(),
-                    detectedPlatform = HostPlatform.detect(),
-                    env = System.getenv(),
-                    sysProps = System.getProperties().entries.associate { "${it.key}" to "${it.value}" },
-                    gradleVersion = project.gradle.gradleVersion,
-                ),
-                modName = project.extensions.findByType(MindustryModExtension::class.java)
-                    ?.modMeta?.name?.takeIf { it.isNotBlank() },
-                details = listOf(
-                    "Game data directory: ${chosenDataDir.orNull ?: implicitDataDir.get()}",
-                    "Mods directory: ${modsDir.get()}",
-                    "Launches: " + if (run.useHeadlessServer.get()) {
-                        "the headless server (${run.headlessServerWorkingDir.get().asFile})"
-                    } else {
-                        "the desktop jar"
-                    },
-                    "Android SDK: " + when {
-                        foundSdk != null -> "found at ${foundSdk.absolutePath}"
-                        android.autoDownloadSdk -> "none usable; download.androidSdkAutoDownload is on"
-                        else -> "none usable, and download.androidSdkAutoDownload is off"
-                    },
-                    "d8: " + (android.d8Command?.joinToString(" ") ?: "not found"),
-                ),
-                libsDir = project.layout.buildDirectory.dir("libs").get().asFile,
-                reportFile = project.layout.buildDirectory.file("mindustry-mod-env.txt").get().asFile,
-            )
         }
 
         project.tasks.register("runMindustry", JavaExec::class.java) { task ->

@@ -39,8 +39,7 @@ MindustryModPlugin.kt   entry point: apply() and the afterEvaluate hooks — the
                         root package
 game/                   MindustryApi (the game API dependency), GameDataDir (its data directory)
 platform/               HostPlatform (Auto/Desktop/Android + Termux detection), TargetPlatform
-                        (Jar/Android/All, the suffix a modVersion() is named for), DeveloperEnvironment
-                        (the OS/JVM/editor/CI report detectEnv prints)
+                        (Jar/Android/All, the suffix a modVersion() is named for)
 meta/                   ModMeta (19 engine fields), ModFileReader (the engine's 4 metadata files),
                         ArtifactNaming (artifact names from build.format / modMeta)
 dsl/                    the public DSL and *only* the DSL: the two extensions
@@ -109,12 +108,6 @@ logging/               RunLogging (the log tee and the cleanup BuildService)
   skip the launch. It depends on `downloadMindustry`, then `clearMods`, then `copyMods` (which is *not* the same as packaging, and copies the built jars into the game's mods directory, UP-TO-DATE while nothing changed); packaging is the user's call
   (`gradle deploy runMindustry`, or their own `dependsOn`). A bare task name matches *every* project,
   so `:runMindustry` targets exactly one.
-- **`detectEnv` reports the environment** (`platform/DeveloperEnvironment`), and everything it prints
-  is resolved while configuring, so its action holds plain values. It reports the configured *and* the
-  detected host platform, because "auto" alone tells the user nothing. The editor and terminal lines are
-  labelled heuristics and the report names the variable behind each one; an `.idea`, `.vscode` or `.run`
-  directory is evidence instead. Do not quietly turn a hint into a fact — the report is a task rather than a
-  pile of configuration-time warnings precisely so that stays easy to follow.
 - **`.run/` is written by the `generateIdeaRunConfigs` task**, never during configuration. Bump
   `IdeaRunConfigs.TEMPLATE_REVISION` whenever the generated XML changes, or existing files stay stale.
 - **The mods path is always `<gameDataDir>/mods`**, created on demand. Unset, the data directory is
