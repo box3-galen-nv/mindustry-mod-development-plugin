@@ -15,6 +15,16 @@ GRADLE_USER_HOME="$PWD/.gradle-home" ./gradlew test --tests "*ModMeta*" --consol
 Test classes mirror the source package; `ProjectBuilder` for wiring tests, Gradle TestKit for real
 builds. Update `README.md` **and** `README_zh.md` when behavior or a default changes.
 
+**Run `./gradlew test` without `--rerun-tasks` or `cleanTest` while iterating**: the suite is 154 s from
+scratch and 3 s when nothing changed, so forcing a rerun is what makes it feel slow. Fourteen TestKit
+classes account for 122 of those seconds — each of their tests waits on a real Gradle build rather than
+burning CPU — while the 22 unit classes take 16 s together.
+
+**Do not turn on JUnit class-level parallelism.** Measured: it made the suite take 369 s instead of 154 s,
+because four TestKit builds inside the one test JVM contend for the same Gradle daemons and memory instead
+of overlapping CPU work. If the suite needs to get faster, cut the number of *builds* (merge smoke tests,
+move name-parsing cases to unit tests) or let fixture builds reuse a configuration cache entry.
+
 The Gradle user home deliberately sits at the repository root, **never inside `build/`**: `clean`
 deletes `build/`, and deleting a Gradle home that live daemons are writing to fails with an opaque OS
 error and leaves a broken cache behind. `.gradle-home/` is gitignored.
