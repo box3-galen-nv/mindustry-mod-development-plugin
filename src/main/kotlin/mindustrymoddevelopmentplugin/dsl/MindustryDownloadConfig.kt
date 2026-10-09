@@ -31,13 +31,6 @@ abstract class MindustryDownloadConfig {
     abstract val mindustryGamePath: RegularFileProperty
 
     /**
-     * Where `server-release.jar` goes: the game's headless server, which is the only Android path that can
-     * be debugged, because it is an ordinary JVM process. Default `<root>/build/game/server-release.jar`,
-     * and it follows [mindustryDownloadVersion] so the server and the API cannot drift apart.
-     */
-    abstract val headlessJarPath: RegularFileProperty
-
-    /**
      * File name template for the downloaded jar, supporting the `{version}` placeholder.
      *
      * For example `"Mindustry-{version}"` → `Mindustry-146.jar`.

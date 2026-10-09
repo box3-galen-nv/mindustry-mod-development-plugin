@@ -13,7 +13,6 @@ import mindustrymoddevelopmentplugin.tasks.ClearModsTask
 import mindustrymoddevelopmentplugin.tasks.CopyModsTask
 import mindustrymoddevelopmentplugin.tasks.DownloadAndroidApkTask
 import mindustrymoddevelopmentplugin.tasks.DownloadAndroidSdkTask
-import mindustrymoddevelopmentplugin.tasks.DownloadHeadlessServerTask
 import mindustrymoddevelopmentplugin.tasks.DownloadMindustryTask
 import mindustrymoddevelopmentplugin.tasks.GenerateIdeaRunConfigsTask
 import mindustrymoddevelopmentplugin.idea.IdeaRunConfigs
@@ -48,16 +47,6 @@ internal object RootWiring {
             ),
         )
 
-        // The headless server and the staging directory live in the *root* project: one server jar and one
-        // import directory for the whole build, however many mod projects there are.
-        download.headlessJarPath.convention(
-            project.layout.file(
-                project.provider { File(project.rootProject.projectDir, "build/game/server-release.jar") },
-            ),
-        )
-        run.headlessServerWorkingDir.convention(
-            project.layout.dir(project.provider { File(project.rootProject.projectDir, "build/headless") }),
-        )
         /*
         The staged jar has to be somewhere the *game's* file picker can reach, because importing it is a
         manual step inside the game: the picker only shows shared storage, so a Termux-private directory
@@ -68,7 +57,6 @@ internal object RootWiring {
                 project.provider { AndroidStaging.defaultDir(File(System.getProperty("user.home"))) },
             ),
         )
-        // One APK for the whole build, like the headless server jar, so its default lives in the root.
         run.androidApkPath.convention(
             project.layout.file(
                 project.provider { File(project.rootProject.projectDir, "build/game/Mindustry.apk") },
@@ -169,17 +157,6 @@ internal object RootWiring {
             }
         }
 
-        if (project == project.rootProject) {
-            project.tasks.register("downloadHeadlessServer") { task ->
-                DownloadHeadlessServerTask.configure(
-                    task, download.headlessJarPath.get().asFile,
-                    download.mindustryDownloadUrl.get(),
-                    download.mindustryDownloadVersion.get(),
-                    offline = project.gradle.startParameter.isOffline,
-                )
-            }
-        }
-
         /*
         Resolved at task realization time, when every project has been configured — otherwise the
         `deploy` tasks of subprojects do not exist yet and the scan silently finds nothing.
@@ -236,11 +213,7 @@ internal object RootWiring {
         runs after clearMods, which removes the previous tagged files, and runMindustry depends on both.
         */
         project.tasks.register("copyMods") { task ->
-            val resolvedModsDir = if (run.useHeadlessServer.get()) {
-                File(File(run.headlessServerWorkingDir.get().asFile, "config"), "mods")
-            } else {
-                modsDir.get()
-            }
+            val resolvedModsDir = modsDir.get()
             CopyModsTask.configure(
                 task,
                 modArtifacts(modProjects.get(), if (run.useDeployRun.get()) "deploy" else "jar"),
@@ -261,27 +234,7 @@ internal object RootWiring {
                 warnAboutAndroidBuildDefaults(project, run)
             }
 
-            val headless = if (run.useHeadlessServer.get()) {
-                warnAboutHeadlessVersionMismatch(project, download, ext)
-                if (run.gameDataDir.orNull != null) {
-                    // Saying nothing here would be the same silent-ignore bug the root-only warning exists for.
-                    project.logger.warn(
-                        "run.gameDataDir is ignored while run.useHeadlessServer is on: the server always " +
-                        "uses <headlessServerWorkingDir>/config as its data directory."
-                    )
-                }
-                RunMindustryTask.HeadlessOptions(
-                    jar = download.headlessJarPath.get().asFile,
-                    workingDir = run.headlessServerWorkingDir.get().asFile,
-                    // The path, not the bare name: a subproject's runMindustry must depend on the root's task.
-                    downloadTaskName = ":downloadHeadlessServer",
-                )
-            } else {
-                null
-            }
-            val resolvedModsDir = headless
-                ?.let { File(File(it.workingDir, "config"), "mods") }
-                ?: modsDir.get()
+            val resolvedModsDir = modsDir.get()
             RunMindustryTask.configure(
                 task, downloadPath.get(), resolvedModsDir, project,
                 debug.maxLogFiles.get(), debug.enableRunLogging.get(),
@@ -300,7 +253,6 @@ internal object RootWiring {
                     suspend = GradleProperties.booleanOrNull(project, IdeaRunConfigs.DEBUG_SUSPEND_PROPERTY)
                         ?: debug.debugSuspend.get(),
                 ),
-                headless = headless,
             )
         }
 
@@ -312,7 +264,7 @@ internal object RootWiring {
         run { } is only evaluated after apply().
         */
         project.afterEvaluate {
-            if (run.hostPlatform.get() == HostPlatform.Android && !run.useHeadlessServer.get()) {
+            if (run.hostPlatform.get() == HostPlatform.Android) {
                 val debugRequested = GradleProperties.booleanOrNull(project, IdeaRunConfigs.DEBUG_PROPERTY)
                     ?: debug.enableDebug.get()
                 if (debugRequested) {
@@ -338,8 +290,7 @@ internal object RootWiring {
                     options = RunMindustryTask.AndroidOptions(
                         appId = run.androidAppId.get(),
                         stagingDir = run.androidStagingDir.get().asFile,
-                        launchApk = run.androidLaunchApk.get(),
-                        // Resolved here: the action holds plain values and cannot ask the
+                                                // Resolved here: the action holds plain values and cannot ask the
                         // file system itself.
                         privateStagingFallback = AndroidStaging.isPrivateFallback(
                             run.androidStagingDir.get().asFile,
@@ -392,25 +343,6 @@ internal object RootWiring {
                 missing.joinToString(", ") +
                 ". See the Android / Termux section of the README for the rest (d8 from Termux, the game " +
                 "data directory, and why -t does not work)."
-        )
-    }
-
-    /**
-     * The headless server is the runtime the mod is loaded into, so its version has to match the API the mod
-     * was compiled against. Mismatches surface as `NoClassDefFoundError` deep inside the game otherwise.
-     */
-    internal fun warnAboutHeadlessVersionMismatch(
-        project: Project,
-        download: MindustryDownloadConfig,
-        ext: MindustryModRootExtension,
-    ) {
-        val api = ext.mindustryApiVersion.orNull?.trim()?.removePrefix("v") ?: return
-        val jar = download.mindustryDownloadVersion.get().trim().removePrefix("v")
-        if (api == jar || api == "be" || jar == "latest") return
-        project.logger.warn(
-            "The headless server downloads Mindustry \"$jar\" while mindustryApiVersion is \"$api\". " +
-            "The mod is compiled against $api and run inside $jar, which usually fails with " +
-            "NoClassDefFoundError. Set download.mindustryDownloadVersion to the same release."
         )
     }
 

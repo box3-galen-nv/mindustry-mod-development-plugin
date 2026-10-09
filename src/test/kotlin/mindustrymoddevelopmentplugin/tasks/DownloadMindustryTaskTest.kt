@@ -186,7 +186,7 @@ class DownloadMindustryTaskTest {
     }
 
     @Test
-    fun `a custom asset name is used for the headless server`() {
+    fun `a custom asset name is used for the download`() {
         val base = "https://example.invalid/mindustry/releases/download"
         // The headless server is a different release asset, and the URL has to follow that.
         assertTrue(
@@ -207,6 +207,6 @@ class DownloadMindustryTaskTest {
         assertTrue(text.contains("not usable on Android"), text)
         assertTrue(text.contains("aarch64"), "the reason is a missing native library: $text")
         assertTrue(text.contains("Downloading it would work"), "the download itself is not the problem: $text")
-        assertTrue(text.contains("useHeadlessServer"), "it must point at the route that works: $text")
+        assertTrue(text.contains("jarAndroid"), "it must point at a route that works: $text")
     }
 }

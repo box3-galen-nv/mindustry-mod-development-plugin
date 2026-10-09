@@ -36,21 +36,6 @@ internal object RunMindustryTask {
         val suspend: Boolean = false,
     )
 
-    /**
-     * Runs the game's headless server instead of the desktop client.
-     *
-     * `server-release.jar` is self-contained, sets its data directory to `<workingDir>/config`, and is an
-     * ordinary JVM — which is why this is the only Android path where JDWP (and therefore `jdb` or a DAP
-     * client) works at all.
-     */
-    class HeadlessOptions(
-        /** The server jar, downloaded by [downloadTaskName]. */
-        val jar: File,
-        /** Working directory; the server's data directory is `<workingDir>/config`. */
-        val workingDir: File,
-        /** The task that provides [jar]. */
-        val downloadTaskName: String = "downloadHeadlessServer",
-    )
 
     /**
      * What running means on Android: stage the built jar and let the game import it.
@@ -64,9 +49,6 @@ internal object RunMindustryTask {
         val appId: String,
         /** Where the artifact is staged for the game's import dialog. */
         val stagingDir: File,
-        /** Also ask Android to launch the game, i.e. `am start`. */
-        val launchApk: Boolean,
-        /** The `am` executable; injectable so a desktop machine can exercise the failure path. */
         val amExecutable: String = "am",
         /** True when staging lands in the Termux-private fallback, which the game's picker cannot see. */
         val privateStagingFallback: Boolean = false,
@@ -131,16 +113,13 @@ internal object RunMindustryTask {
                 "Staged ${staged.size} jar(s) in ${options.stagingDir.absolutePath}: " +
                 staged.joinToString(", ") { it.name } +
                 ". On the phone, use Mods -> Import mod to pick the file; this build cannot write the " +
-                "game's own mods folder on Android 11 or later. The game is started for you unless " +
-                "run.androidLaunchApk = false."
+                "game's own mods folder on Android 11 or later. The game is started for you."
             )
 
             // Best effort: without `am` (a desktop machine, a locked-down ROM) the staging above is still
             // everything the user needs, so a failure here is a warning rather than the end of the task.
             runAm(task, options, "force-stop", options.appId)
-            if (options.launchApk) {
-                runAm(task, options, "start", "-n", "${options.appId}/mindustry.android.AndroidLauncher")
-            }
+            runAm(task, options, "start", "-n", "${options.appId}/mindustry.android.AndroidLauncher")
         }
     }
 
@@ -195,17 +174,15 @@ internal object RunMindustryTask {
         enableRunLogging: Boolean = MindustryDebugConfig.DEFAULT_ENABLE_RUN_LOGGING,
         dataDir: File? = null,
         debug: DebugOptions = DebugOptions(),
-        headless: HeadlessOptions? = null,
         logCleanup: Provider<RunLogging.CleanupService>? = null,
     ) {
         // Resolved while configuring: an action may not reach into the project for it.
         val logDir = project.layout.buildDirectory.dir("logger").get().asFile
 
-        // The data directory the *game* will use: the server ignores -Dmindustry.data.dir and reads
-        // <workingDir>/config instead, so the mods have to be staged there.
-        val gameDataDir = headless?.let { File(it.workingDir, "config") } ?: dataDir
+        // The data directory the *game* will use, and what -Dmindustry.data.dir passes to it.
+        val gameDataDir = dataDir
 
-        task.dependsOn(headless?.downloadTaskName ?: "downloadMindustry")
+        task.dependsOn("downloadMindustry")
         task.dependsOn("clearMods")
 
         /*
@@ -214,16 +191,10 @@ internal object RunMindustryTask {
         coupling writes `tasks.named("runMindustry") { dependsOn(":sub:deploy") }` itself. The copy
         below only reads the packaging task's archive path, so it works either way.
         */
-        if (headless == null) {
-            task.classpath = project.files(downloadPath)
-            task.mainClass.set("mindustry.desktop.DesktopLauncher")
-        } else {
-            task.classpath = project.files(headless.jar)
-            task.mainClass.set("mindustry.server.ServerLauncher")
-            task.workingDir = headless.workingDir
-        }
+        task.classpath = project.files(downloadPath)
+        task.mainClass.set("mindustry.desktop.DesktopLauncher")
 
-        if (dataDir != null && headless == null) {
+        if (dataDir != null) {
             /*
             Absolute path on purpose: the game runs `files.absolute(...)` on the value, so a
             relative path would resolve against the process working directory, while Gradle's

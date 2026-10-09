@@ -34,7 +34,6 @@ class AndroidStagingTest {
             options = RunMindustryTask.AndroidOptions(
                 appId = "io.anuke.mindustry",
                 stagingDir = staging,
-                launchApk = false,
                 // No `am` on a desktop machine: the staging must still succeed, with a warning.
                 amExecutable = File(project.projectDir, "no-such-am").absolutePath,
             ),

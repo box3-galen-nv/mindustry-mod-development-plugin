@@ -78,25 +78,10 @@ abstract class MindustryRunConfig {
     // ---- Android SDK install target (consumed by jarAndroid) ----
 
     /**
-     * Directory the SDK is installed into when [MindustryBuildConfig.androidSdkDir] is unset.
-     *
-     * Defaults to `<gradleUserHome>/mindustry-mod-development-plugin/android-sdk`, which survives `clean`
-     * and is shared by every project using this plugin. When `androidSdkDir` *is* set, the SDK
-     * is installed there instead — an empty configured directory is the common case.
-     */
-    abstract val useHeadlessServer: Property<Boolean>
-
-    /** Working directory of the headless server; its data directory is `<workingDir>/config`. */
-    abstract val headlessServerWorkingDir: DirectoryProperty
-
-    /**
      * Where the built jar is copied when running on Android, because the game's own `Android/data`
      * directory cannot be written by other apps on Android 11+. Import it in the game from there.
      */
     abstract val androidStagingDir: DirectoryProperty
-
-    /** After staging, also ask Android to launch the game (`am start`). Off by default. */
-    abstract val androidLaunchApk: Property<Boolean>
 
     /**
      * A Mindustry APK to stage and import. itch.io serves no direct file URL — its downloads go through a
@@ -129,8 +114,6 @@ abstract class MindustryRunConfig {
         // The gameDataDir property has no convention here: its default is the root project's directory, which this
         // class cannot see. MindustryModPlugin registers it.
         hostPlatform.convention(HostPlatform.Auto)
-        useHeadlessServer.convention(false)
-        androidLaunchApk.convention(DEFAULT_ANDROID_LAUNCH_APK)
         androidApkUrl.convention(DEFAULT_ANDROID_APK_URL)
         androidApkVersionCheck.convention(DEFAULT_ANDROID_APK_VERSION_CHECK)
         androidAppId.convention(GameDataDir.ANDROID_APP_ID)
@@ -156,11 +139,6 @@ abstract class MindustryRunConfig {
         /** Default value of [androidApkVersionCheck]. */
         const val DEFAULT_ANDROID_APK_VERSION_CHECK = true
 
-        /**
-         * Launching the game after staging is on by default: on Android the run *is* starting the
-         * installed game, and importing the mod is the step the user still has to do by hand.
-         */
-        const val DEFAULT_ANDROID_LAUNCH_APK = true
 
     }
 }
