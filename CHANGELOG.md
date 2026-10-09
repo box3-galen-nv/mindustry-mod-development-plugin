@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+- On Android `runMindustry` now starts the installed game by default (`run.androidLaunchApk`, default true)
+  after staging the mod jars, so the run behaves like a run again — importing the staged file stays the one
+  manual step. Set it to false to stage only.
+- `downloadMindustry` reports that it is not usable on Android: invoking it there warns that the desktop client
+  it downloads cannot be launched (Arc ships no SDL backend for Linux on aarch64), that the download itself would
+  work, and which routes do. `downloadHeadlessServer` is now its own task object — it shares the download, not
+  the verdict — so that rule can be unconditional without the server jar, which does run there, being warned about.
 - Copying the built mod jars into the game's mods directory is its own task, `copyMods`, which
   `runMindustry` depends on: it can be run alone, it is UP-TO-DATE while the jars are unchanged, and it
   no longer hides a write into the game directory inside the launch task.

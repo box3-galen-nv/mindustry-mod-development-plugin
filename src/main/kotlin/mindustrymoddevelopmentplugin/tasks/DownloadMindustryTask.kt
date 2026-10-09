@@ -3,6 +3,7 @@ package mindustrymoddevelopmentplugin.tasks
 import org.gradle.api.logging.Logger
 import mindustrymoddevelopmentplugin.dsl.MindustryDownloadConfig
 import java.io.File
+import mindustrymoddevelopmentplugin.platform.HostPlatform
 import java.io.IOException
 import java.io.InputStream
 import java.net.HttpURLConnection
@@ -41,6 +42,8 @@ internal object DownloadMindustryTask {
      * @param baseUrl release download base, e.g. `https://github.com/Anuken/Mindustry/releases/download`
      * @param version release to fetch, e.g. `"146"`, `"v146"` or `"latest"`
      * @param offline the build's `--offline` flag; a missing jar then fails instead of using the network
+     * @param warnOnAndroid whether to warn that this download is not usable on Android; only
+     * [DownloadHeadlessServerTask] turns it off, because the server jar is the one route that does run there
      */
     fun configure(
         task: Task,
@@ -50,7 +53,10 @@ internal object DownloadMindustryTask {
         assetName: String = "Mindustry.jar",
         pathPropertyName: String = "download.mindustryGamePath",
         offline: Boolean = false,
+        warnOnAndroid: Boolean = true,
     ) {
+        // Resolved while configuring: the action may not reach into the environment itself.
+        val onAndroid = HostPlatform.detect() == HostPlatform.Android
         val url = releaseUrl(baseUrl, version, assetName)
         val stamp = stampOf(target)
 
@@ -64,6 +70,9 @@ internal object DownloadMindustryTask {
         task.outputs.upToDateWhen { ours(target, stamp, url) }
         task.doLast {
             val logger = task.logger
+            if (onAndroid && warnOnAndroid) {
+                logger.warn(androidUnavailableWarning(assetName, version))
+            }
             if (target.isFile && !stamp.isFile) {
                 // Not ours: `download.mindustryGamePath` may point at a jar the user built. Never replace
                 // it, but say so when it cannot be a game jar, because the failure would be confusing.
@@ -92,6 +101,21 @@ internal object DownloadMindustryTask {
             fetch(url, target, logger::lifecycle)
         }
     }
+
+    /**
+     * Why this download is not usable on Android, and which of this plugin's routes is.
+     *
+     * The desktop client this task exists for cannot run there: Arc ships no SDL backend for Linux on
+     * aarch64, so the jar has no native library to open a window with. The download itself would succeed,
+     * which is exactly why saying nothing would be worse — the failure would only appear later, when the
+     * game is launched.
+     */
+    internal fun androidUnavailableWarning(assetName: String, version: String): String =
+        "downloadMindustry is not usable on Android: '$assetName' for Mindustry $version is the desktop " +
+        "client, and Arc ships no SDL backend for Linux on aarch64, so there is no native library to open " +
+        "a window with. Downloading it would work — launching it would not. For a run that does work on " +
+        "Android, use downloadHeadlessServer with run.useHeadlessServer = true, or jarAndroid plus " +
+        "runMindustry's staging to reach the game installed on the phone."
 
     /**
      * True when [target] exists and was downloaded for exactly [url].

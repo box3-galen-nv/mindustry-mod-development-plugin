@@ -130,7 +130,7 @@ abstract class MindustryRunConfig {
         // class cannot see. MindustryModPlugin registers it.
         hostPlatform.convention(HostPlatform.Auto)
         useHeadlessServer.convention(false)
-        androidLaunchApk.convention(false)
+        androidLaunchApk.convention(DEFAULT_ANDROID_LAUNCH_APK)
         androidApkUrl.convention(DEFAULT_ANDROID_APK_URL)
         androidApkVersionCheck.convention(DEFAULT_ANDROID_APK_VERSION_CHECK)
         androidAppId.convention(GameDataDir.ANDROID_APP_ID)
@@ -155,6 +155,12 @@ abstract class MindustryRunConfig {
 
         /** Default value of [androidApkVersionCheck]. */
         const val DEFAULT_ANDROID_APK_VERSION_CHECK = true
+
+        /**
+         * Launching the game after staging is on by default: on Android the run *is* starting the
+         * installed game, and importing the mod is the step the user still has to do by hand.
+         */
+        const val DEFAULT_ANDROID_LAUNCH_APK = true
 
     }
 }

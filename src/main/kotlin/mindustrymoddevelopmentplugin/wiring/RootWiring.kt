@@ -13,6 +13,7 @@ import mindustrymoddevelopmentplugin.tasks.ClearModsTask
 import mindustrymoddevelopmentplugin.tasks.CopyModsTask
 import mindustrymoddevelopmentplugin.tasks.DownloadAndroidApkTask
 import mindustrymoddevelopmentplugin.tasks.DownloadAndroidSdkTask
+import mindustrymoddevelopmentplugin.tasks.DownloadHeadlessServerTask
 import mindustrymoddevelopmentplugin.tasks.DownloadMindustryTask
 import mindustrymoddevelopmentplugin.tasks.GenerateIdeaRunConfigsTask
 import mindustrymoddevelopmentplugin.idea.IdeaRunConfigs
@@ -170,12 +171,10 @@ internal object RootWiring {
 
         if (project == project.rootProject) {
             project.tasks.register("downloadHeadlessServer") { task ->
-                DownloadMindustryTask.configure(
+                DownloadHeadlessServerTask.configure(
                     task, download.headlessJarPath.get().asFile,
                     download.mindustryDownloadUrl.get(),
                     download.mindustryDownloadVersion.get(),
-                    assetName = "server-release.jar",
-                    pathPropertyName = "download.headlessJarPath",
                     offline = project.gradle.startParameter.isOffline,
                 )
             }

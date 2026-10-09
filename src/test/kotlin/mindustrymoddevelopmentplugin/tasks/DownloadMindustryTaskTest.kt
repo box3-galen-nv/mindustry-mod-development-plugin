@@ -200,4 +200,13 @@ class DownloadMindustryTaskTest {
         // The default stays the desktop jar.
         assertTrue(DownloadMindustryTask.releaseUrl(base, "147") == "$base/v147/Mindustry.jar")
     }
+
+    @Test
+    fun `the Android warning says the task is unusable there, and why`() {
+        val text = DownloadMindustryTask.androidUnavailableWarning("Mindustry.jar", "159")
+        assertTrue(text.contains("not usable on Android"), text)
+        assertTrue(text.contains("aarch64"), "the reason is a missing native library: $text")
+        assertTrue(text.contains("Downloading it would work"), "the download itself is not the problem: $text")
+        assertTrue(text.contains("useHeadlessServer"), "it must point at the route that works: $text")
+    }
 }

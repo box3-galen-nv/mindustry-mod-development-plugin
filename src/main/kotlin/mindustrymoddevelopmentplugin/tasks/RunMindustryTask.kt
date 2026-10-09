@@ -130,9 +130,9 @@ internal object RunMindustryTask {
             logger.lifecycle(
                 "Staged ${staged.size} jar(s) in ${options.stagingDir.absolutePath}: " +
                 staged.joinToString(", ") { it.name } +
-                ". On the phone, open the game and use Mods -> Import mod to pick the file; this build " +
-                "cannot write the game's own mods folder on Android 11 or later. Set " +
-                "run.androidLaunchApk = true to have this step start the game for you."
+                ". On the phone, use Mods -> Import mod to pick the file; this build cannot write the " +
+                "game's own mods folder on Android 11 or later. The game is started for you unless " +
+                "run.androidLaunchApk = false."
             )
 
             // Best effort: without `am` (a desktop machine, a locked-down ROM) the staging above is still

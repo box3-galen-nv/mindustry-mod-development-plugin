@@ -182,6 +182,14 @@ logging/               RunLogging (the log tee and the cleanup BuildService)
   path, because hashing a whole SDK costs more than re-running d8. `download.androidSdkExtraArgs` is
   appended to both sdkmanager runs, so it must reject the flags the plugin sets itself (`--sdk_root` and
   the action flags) *before* downloading the tools.
+- **`downloadMindustry` is not usable on Android and says so**: invoking it there warns that the desktop
+  client it fetches cannot be launched (Arc ships no SDL backend for Linux on aarch64), that the download
+  itself would work, and which routes do. The warning is decided by *which task ran*, never by which asset
+  it fetched, which is why `downloadHeadlessServer` is its own task object
+  (`tasks/DownloadHeadlessServerTask`) that reuses `DownloadMindustryTask.fetch` and the shared wiring with
+  `warnOnAndroid = false`: the server jar is self-contained with linux/aarch64 natives and is the one route
+  that runs on Android, so warning about it would be false. The warning fires in the action rather than at
+  configuration, so `./gradlew tasks` stays quiet on Termux.
 - **Downloads**: `downloadMindustry` is the plugin's own downloader — no third-party download plugin is
   applied or depended on. It streams to `<name>.part`, checks the zip signature, then moves the file into
   place, and records the URL in a `<name>.url` stamp. That stamp is what separates a jar this build
